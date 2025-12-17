@@ -44,6 +44,8 @@ void Page::serialize(std::ostream& os) const {
   for (int i = 0; i < footnoteCount; i++) {
     os.write(footnotes[i].number, 3);
     os.write(footnotes[i].href, 64);
+    uint8_t isInlineFlag = footnotes[i].isInline ? 1 : 0;
+    os.write(reinterpret_cast<const char*>(&isInlineFlag), 1);
   }
 }
 
@@ -80,6 +82,9 @@ std::unique_ptr<Page> Page::deserialize(std::istream& is) {
   for (int i = 0; i < page->footnoteCount; i++) {
     is.read(page->footnotes[i].number, 3);
     is.read(page->footnotes[i].href, 64);
+    uint8_t isInlineFlag = 0;
+    is.read(reinterpret_cast<char*>(&isInlineFlag), 1);
+    page->footnotes[i].isInline = (isInlineFlag != 0);
   }
 
   return page;
