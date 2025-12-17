@@ -10,7 +10,9 @@
 #include "Page.h"
 #include "parsers/ChapterHtmlSlimParser.h"
 
-constexpr uint8_t SECTION_FILE_VERSION = 6;
+namespace {
+constexpr uint8_t SECTION_FILE_VERSION = 5;
+}
 
 // Helper function to write XML-escaped text directly to file
 static bool writeEscapedXml(File& file, const char* text) {

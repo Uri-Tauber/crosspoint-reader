@@ -1,7 +1,4 @@
-//
-// Created by jlaunay on 13/12/2025.
-//
-#include "EpubReaderMenuScreen.h"
+#include "EpubReaderMenuActivity.h"
 
 #include <GfxRenderer.h>
 
@@ -9,18 +6,18 @@
 
 constexpr int MENU_ITEMS_COUNT = 2;
 
-void EpubReaderMenuScreen::taskTrampoline(void* param) {
-  auto* self = static_cast<EpubReaderMenuScreen*>(param);
+void EpubReaderMenuActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<EpubReaderMenuActivity*>(param);
   self->displayTaskLoop();
 }
 
-void EpubReaderMenuScreen::onEnter() {
+void EpubReaderMenuActivity::onEnter() {
   renderingMutex = xSemaphoreCreateMutex();
   selectorIndex = 0;
 
   // Trigger first update
   updateRequired = true;
-  xTaskCreate(&EpubReaderMenuScreen::taskTrampoline, "EpubReaderMenuTask",
+  xTaskCreate(&EpubReaderMenuActivity::taskTrampoline, "EpubReaderMenuTask",
               2048,               // Stack size
               this,               // Parameters
               1,                  // Priority
@@ -28,7 +25,7 @@ void EpubReaderMenuScreen::onEnter() {
   );
 }
 
-void EpubReaderMenuScreen::onExit() {
+void EpubReaderMenuActivity::onExit() {
   // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   if (displayTaskHandle) {
@@ -39,7 +36,7 @@ void EpubReaderMenuScreen::onExit() {
   renderingMutex = nullptr;
 }
 
-void EpubReaderMenuScreen::handleInput() {
+void EpubReaderMenuActivity::loop() {
   const bool prevReleased =
       inputManager.wasReleased(InputManager::BTN_UP) || inputManager.wasReleased(InputManager::BTN_LEFT);
   const bool nextReleased =
@@ -58,7 +55,7 @@ void EpubReaderMenuScreen::handleInput() {
   }
 }
 
-void EpubReaderMenuScreen::displayTaskLoop() {
+void EpubReaderMenuActivity::displayTaskLoop() {
   while (true) {
     if (updateRequired) {
       updateRequired = false;
@@ -70,7 +67,7 @@ void EpubReaderMenuScreen::displayTaskLoop() {
   }
 }
 
-void EpubReaderMenuScreen::renderScreen() {
+void EpubReaderMenuActivity::renderScreen() {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

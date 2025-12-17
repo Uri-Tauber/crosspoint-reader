@@ -1,4 +1,4 @@
-#include "EpubReaderChapterSelectionScreen.h"
+#include "EpubReaderChapterSelectionActivity.h"
 
 #include <GfxRenderer.h>
 #include <SD.h>
@@ -8,52 +8,12 @@
 constexpr int PAGE_ITEMS = 24;
 constexpr int SKIP_PAGE_MS = 700;
 
-void EpubReaderChapterSelectionScreen::taskTrampoline(void* param) {
-  auto* self = static_cast<EpubReaderChapterSelectionScreen*>(param);
+void EpubReaderChapterSelectionActivity::taskTrampoline(void* param) {
+  auto* self = static_cast<EpubReaderChapterSelectionActivity*>(param);
   self->displayTaskLoop();
 }
 
-void EpubReaderChapterSelectionScreen::onEnter() {
-  if (!epub) {
-    return;
-  }
-
-  renderingMutex = xSemaphoreCreateMutex();
-
-  // Build filtered chapter list (excluding footnote pages)
-  buildFilteredChapterList();
-
-  // Find the index in filtered list that corresponds to currentSpineIndex
-  selectorIndex = 0;
-  for (size_t i = 0; i < filteredSpineIndices.size(); i++) {
-    if (filteredSpineIndices[i] == currentSpineIndex) {
-      selectorIndex = i;
-      break;
-    }
-  }
-
-  // Trigger first update
-  updateRequired = true;
-  xTaskCreate(&EpubReaderChapterSelectionScreen::taskTrampoline, "EpubReaderChapterSelectionScreenTask",
-              2048,               // Stack size
-              this,               // Parameters
-              1,                  // Priority
-              &displayTaskHandle  // Task handle
-  );
-}
-
-void EpubReaderChapterSelectionScreen::onExit() {
-  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
-  xSemaphoreTake(renderingMutex, portMAX_DELAY);
-  if (displayTaskHandle) {
-    vTaskDelete(displayTaskHandle);
-    displayTaskHandle = nullptr;
-  }
-  vSemaphoreDelete(renderingMutex);
-  renderingMutex = nullptr;
-}
-
-void EpubReaderChapterSelectionScreen::buildFilteredChapterList() {
+void EpubReaderChapterSelectionActivity::buildFilteredChapterList() {
   filteredSpineIndices.clear();
 
   for (int i = 0; i < epub->getSpineItemsCount(); i++) {
@@ -77,7 +37,47 @@ void EpubReaderChapterSelectionScreen::buildFilteredChapterList() {
                 epub->getSpineItemsCount());
 }
 
-void EpubReaderChapterSelectionScreen::handleInput() {
+void EpubReaderChapterSelectionActivity::onEnter() {
+  if (!epub) {
+    return;
+  }
+
+  renderingMutex = xSemaphoreCreateMutex();
+
+  // Build filtered chapter list (excluding footnote pages)
+  buildFilteredChapterList();
+
+  // Find the index in filtered list that corresponds to currentSpineIndex
+  selectorIndex = 0;
+  for (size_t i = 0; i < filteredSpineIndices.size(); i++) {
+    if (filteredSpineIndices[i] == currentSpineIndex) {
+      selectorIndex = i;
+      break;
+    }
+  }
+
+  // Trigger first update
+  updateRequired = true;
+  xTaskCreate(&EpubReaderChapterSelectionActivity::taskTrampoline, "EpubReaderChapterSelectionActivityTask",
+              2048,               // Stack size
+              this,               // Parameters
+              1,                  // Priority
+              &displayTaskHandle  // Task handle
+  );
+}
+
+void EpubReaderChapterSelectionActivity::onExit() {
+  // Wait until not rendering to delete task to avoid killing mid-instruction to EPD
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  if (displayTaskHandle) {
+    vTaskDelete(displayTaskHandle);
+    displayTaskHandle = nullptr;
+  }
+  vSemaphoreDelete(renderingMutex);
+  renderingMutex = nullptr;
+}
+
+void EpubReaderChapterSelectionActivity::loop() {
   const bool prevReleased =
       inputManager.wasReleased(InputManager::BTN_UP) || inputManager.wasReleased(InputManager::BTN_LEFT);
   const bool nextReleased =
@@ -110,7 +110,7 @@ void EpubReaderChapterSelectionScreen::handleInput() {
   }
 }
 
-void EpubReaderChapterSelectionScreen::displayTaskLoop() {
+void EpubReaderChapterSelectionActivity::displayTaskLoop() {
   while (true) {
     if (updateRequired) {
       updateRequired = false;
@@ -122,7 +122,7 @@ void EpubReaderChapterSelectionScreen::displayTaskLoop() {
   }
 }
 
-void EpubReaderChapterSelectionScreen::renderScreen() {
+void EpubReaderChapterSelectionActivity::renderScreen() {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();

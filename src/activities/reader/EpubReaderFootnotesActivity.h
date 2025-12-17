@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "../../lib/Epub/Epub/FootnoteEntry.h"
-#include "Screen.h"
+#include "../Activity.h"
 
 class FootnotesData {
  private:
@@ -36,17 +36,17 @@ class FootnotesData {
   }
 };
 
-class EpubReaderFootnotesScreen final : public Screen {
+class EpubReaderFootnotesActivity final : public Activity {
   const FootnotesData& footnotes;
   const std::function<void()> onGoBack;
   const std::function<void(const char*)> onSelectFootnote;
   int selectedIndex;
 
  public:
-  EpubReaderFootnotesScreen(GfxRenderer& renderer, InputManager& inputManager, const FootnotesData& footnotes,
-                            const std::function<void()>& onGoBack,
-                            const std::function<void(const char*)>& onSelectFootnote)
-      : Screen(renderer, inputManager),
+  EpubReaderFootnotesActivity(GfxRenderer& renderer, InputManager& inputManager, const FootnotesData& footnotes,
+                              const std::function<void()>& onGoBack,
+                              const std::function<void(const char*)>& onSelectFootnote)
+      : Activity(renderer, inputManager),
         footnotes(footnotes),
         onGoBack(onGoBack),
         onSelectFootnote(onSelectFootnote),
@@ -54,7 +54,7 @@ class EpubReaderFootnotesScreen final : public Screen {
 
   void onEnter() override;
   void onExit() override;
-  void handleInput() override;
+  void loop() override;
 
  private:
   void render();

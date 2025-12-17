@@ -1,19 +1,19 @@
-#include "EpubReaderFootnotesScreen.h"
+#include "EpubReaderFootnotesActivity.h"
 
 #include <GfxRenderer.h>
 
 #include "config.h"
 
-void EpubReaderFootnotesScreen::onEnter() {
+void EpubReaderFootnotesActivity::onEnter() {
   selectedIndex = 0;
   render();
 }
 
-void EpubReaderFootnotesScreen::onExit() {
+void EpubReaderFootnotesActivity::onExit() {
   // Nothing to clean up
 }
 
-void EpubReaderFootnotesScreen::handleInput() {
+void EpubReaderFootnotesActivity::loop() {
   if (inputManager.wasPressed(InputManager::BTN_BACK)) {
     onGoBack();
     return;
@@ -23,8 +23,6 @@ void EpubReaderFootnotesScreen::handleInput() {
     const FootnoteEntry* entry = footnotes.getEntry(selectedIndex);
     if (entry) {
       Serial.printf("[%lu] [FNS] Selected footnote: %s -> %s\n", millis(), entry->number, entry->href);
-
-      // Appeler le callback - EpubReaderScreen gère la navigation
       onSelectFootnote(entry->href);
     }
     return;
@@ -51,7 +49,7 @@ void EpubReaderFootnotesScreen::handleInput() {
   }
 }
 
-void EpubReaderFootnotesScreen::render() {
+void EpubReaderFootnotesActivity::render() {
   renderer.clearScreen();
 
   constexpr int startY = 50;
