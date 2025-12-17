@@ -261,6 +261,24 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
 
     if (isNoteref) {
       Serial.printf("[%lu] [NOTEREF] Found noteref: href=%s\n", millis(), href ? href : "null");
+
+      // Flush any pending word before starting noteref collection
+      // This ensures proper word order in the text flow
+      if (self->partWordBufferIndex > 0) {
+        EpdFontStyle fontStyle = REGULAR;
+        if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
+          fontStyle = BOLD_ITALIC;
+        } else if (self->boldUntilDepth < self->depth) {
+          fontStyle = BOLD;
+        } else if (self->italicUntilDepth < self->depth) {
+          fontStyle = ITALIC;
+        }
+
+        self->partWordBuffer[self->partWordBufferIndex] = '\0';
+        self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
+        self->partWordBufferIndex = 0;
+      }
+
       self->insideNoteref = true;
       self->currentNoterefTextLen = 0;
       self->currentNoterefText[0] = '\0';
@@ -506,7 +524,7 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     return;
   }
 
-  // Rest of endElement logic for pass 2 - UNCHANGED
+  // Rest of endElement logic for pass 2 - MODIFIED
   if (strcmp(name, "a") == 0 && self->insideNoteref) {
     self->insideNoteref = false;
 
@@ -530,6 +548,25 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         noteref.href[127] = '\0';
 
         self->noterefCallback(noteref);
+      }
+
+      // Ensure [1] appears inline after the word it references
+      EpdFontStyle fontStyle = REGULAR;
+      if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
+        fontStyle = BOLD_ITALIC;
+      } else if (self->boldUntilDepth < self->depth) {
+        fontStyle = BOLD;
+      } else if (self->italicUntilDepth < self->depth) {
+        fontStyle = ITALIC;
+      }
+
+      // Format the noteref text with brackets
+      char formattedNoteref[32];
+      snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentNoterefText);
+
+      // Add it as a word to the current text block
+      if (self->currentTextBlock) {
+        self->currentTextBlock->addWord(formattedNoteref, fontStyle);
       }
     }
 
