@@ -77,7 +77,7 @@ class ChapterHtmlSlimParser {
   std::function<void(Noteref&)> noterefCallback = nullptr;
 
   // Footnote tracking for current page
-  FootnoteEntry currentPageFootnotes[32];
+  FootnoteEntry currentPageFootnotes[16];
   int currentPageFootnoteCount = 0;
 
   // Inline footnotes (aside) tracking

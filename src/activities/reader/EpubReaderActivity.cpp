@@ -326,14 +326,13 @@ void EpubReaderActivity::renderScreen() {
 
   // Check footnote before copy
   bool hasCorruptedFootnotes = false;
-  for (int i = 0; i < p->footnoteCount && i < 16; i++) {
+  for (int i = 0; i < p->footnoteCount && i < 8; i++) {  // Changé de 16 à 8
     FootnoteEntry* fn = p->getFootnote(i);
     if (fn) {
-      // Vérifier que number et href sont null-terminés
       bool numberValid = false;
       bool hrefValid = false;
 
-      // Chercher le null terminator dans number (3 bytes)
+      // Search null terminator in number (3 bytes)
       for (int j = 0; j < 3; j++) {
         if (fn->number[j] == '\0') {
           numberValid = true;
@@ -341,7 +340,7 @@ void EpubReaderActivity::renderScreen() {
         }
       }
 
-      // Chercher le null terminator dans href (64 bytes)
+      // Search null terminator in href (64 bytes)
       for (int j = 0; j < 64; j++) {
         if (fn->href[j] == '\0') {
           hrefValid = true;
@@ -367,7 +366,7 @@ void EpubReaderActivity::renderScreen() {
 
   // Copy footnotes from page to currentPageFootnotes
   currentPageFootnotes.clear();
-  int maxFootnotes = (p->footnoteCount < 16) ? p->footnoteCount : 16;
+  int maxFootnotes = (p->footnoteCount < 8) ? p->footnoteCount : 8;
 
   for (int i = 0; i < maxFootnotes; i++) {
     FootnoteEntry* footnote = p->getFootnote(i);
@@ -375,7 +374,7 @@ void EpubReaderActivity::renderScreen() {
       currentPageFootnotes.addFootnote(footnote->number, footnote->href);
     }
   }
-  Serial.printf("[%lu] [ERS] Loaded %d footnotes for current page\n", millis(), p->footnoteCount);
+  Serial.printf("[%lu] [ERS] Loaded %d footnotes for current page\n", millis(), maxFootnotes);
 
   const auto start = millis();
   renderContents(std::move(p));

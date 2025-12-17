@@ -60,7 +60,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::BLOCK_STYLE style
 }
 
 void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const char* href) {
-  if (currentPageFootnoteCount >= 32) return;
+  if (currentPageFootnoteCount >= 16) return;
 
   Serial.printf("[%lu] [ADDFT] Adding footnote: num=%s, href=%s\n", millis(), number, href);
 

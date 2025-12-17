@@ -48,7 +48,7 @@ class Page {
     elementCapacity = 24;
     elements = new std::shared_ptr<PageElement>[elementCapacity];
 
-    footnoteCapacity = 8;
+    footnoteCapacity = 16;
     footnotes = new FootnoteEntry[footnoteCapacity];
     for (int i = 0; i < footnoteCapacity; i++) {
       footnotes[i].number[0] = '\0';
