@@ -5,8 +5,8 @@
 #include "KOReaderCredentialStore.h"
 #include "KOReaderSyncActivity.h"
 #include "MappedInputManager.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 namespace {
 // Time threshold for treating a long press as a page-up/page-down

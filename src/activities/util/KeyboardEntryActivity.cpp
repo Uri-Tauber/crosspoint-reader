@@ -1,8 +1,8 @@
 #include "KeyboardEntryActivity.h"
 
 #include "MappedInputManager.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 // Keyboard layouts - lowercase
 const char* const KeyboardEntryActivity::keyboard[NUM_ROWS] = {

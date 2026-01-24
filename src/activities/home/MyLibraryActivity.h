@@ -16,7 +16,7 @@ class MyLibraryActivity final : public Activity {
  private:
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
-  
+
   Tab currentTab = Tab::Recent;
   size_t selectorIndex = 0;
   bool updateRequired = false;
@@ -44,9 +44,9 @@ class MyLibraryActivity final : public Activity {
 
  public:
   explicit MyLibraryActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                                const std::function<void()>& onGoHome, 
-                                const std::function<void(const std::string& path, Tab fromTab)>& onSelectBook,
-                                Tab initialTab = Tab::Recent, std::string initialPath = "/")
+                             const std::function<void()>& onGoHome,
+                             const std::function<void(const std::string& path, Tab fromTab)>& onSelectBook,
+                             Tab initialTab = Tab::Recent, std::string initialPath = "/")
       : Activity("MyLibrary", renderer, mappedInput),
         basepath(initialPath.empty() ? "/" : std::move(initialPath)),
         currentTab(initialTab),

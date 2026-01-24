@@ -175,12 +175,15 @@ void GfxRenderer::drawArc(const int maxRadius, const int cx, const int cy, const
 };
 
 // Border is inside the rectangle, rounded corners
-void GfxRenderer::drawRoundedRect(const int x, const int y, const int width, const int height, const int lineWidth, const int cornerRadius, bool state) const {
+void GfxRenderer::drawRoundedRect(const int x, const int y, const int width, const int height, const int lineWidth,
+                                  const int cornerRadius, bool state) const {
   drawRoundedRect(x, y, width, height, lineWidth, cornerRadius, true, true, true, true, state);
 }
 
 // Border is inside the rectangle, rounded corners
-void GfxRenderer::drawRoundedRect(const int x, const int y, const int width, const int height, const int lineWidth, const int cornerRadius, bool roundTopLeft, bool roundTopRight, bool roundBottomLeft, bool roundBottomRight, bool state) const {
+void GfxRenderer::drawRoundedRect(const int x, const int y, const int width, const int height, const int lineWidth,
+                                  const int cornerRadius, bool roundTopLeft, bool roundTopRight, bool roundBottomLeft,
+                                  bool roundBottomRight, bool state) const {
   if (lineWidth <= 0 || width <= 0 || height <= 0) {
     return;
   }
@@ -281,7 +284,8 @@ void GfxRenderer::fillRectDither(const int x, const int y, const int width, cons
   }
 }
 
-void GfxRenderer::fillArc(const int maxRadius, const int cx, const int cy, const int xDir, const int yDir, Color color) const {
+void GfxRenderer::fillArc(const int maxRadius, const int cx, const int cy, const int xDir, const int yDir,
+                          Color color) const {
   const int radiusSq = maxRadius * maxRadius;
   for (int dy = 0; dy <= maxRadius; ++dy) {
     for (int dx = 0; dx <= maxRadius; ++dx) {
@@ -295,11 +299,14 @@ void GfxRenderer::fillArc(const int maxRadius, const int cx, const int cy, const
   }
 }
 
-void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, const int height, const int cornerRadius, const Color color) const {
+void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, const int height, const int cornerRadius,
+                                  const Color color) const {
   fillRoundedRect(x, y, width, height, cornerRadius, true, true, true, true, color);
 }
 
-void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, const int height, const int cornerRadius, bool roundTopLeft, bool roundTopRight, bool roundBottomLeft, bool roundBottomRight, const Color color) const {
+void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, const int height, const int cornerRadius,
+                                  bool roundTopLeft, bool roundTopRight, bool roundBottomLeft, bool roundBottomRight,
+                                  const Color color) const {
   if (width <= 0 || height <= 0) {
     return;
   }
@@ -330,21 +337,21 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
   if (roundTopRight) {
     fillArc(maxRadius, x + width - maxRadius - 1, y + maxRadius, 1, -1, color);
   } else {
-    fillRectDither(x + width - maxRadius, y, maxRadius, maxRadius, color);  
+    fillRectDither(x + width - maxRadius, y, maxRadius, maxRadius, color);
   }
 
   if (roundBottomRight) {
     fillArc(maxRadius, x + width - maxRadius - 1, y + height - maxRadius - 1, 1, 1, color);
   } else {
-    fillRectDither(x + width - maxRadius, y + height - maxRadius, maxRadius, maxRadius, color);  
+    fillRectDither(x + width - maxRadius, y + height - maxRadius, maxRadius, maxRadius, color);
   }
-  
+
   if (roundBottomLeft) {
     fillArc(maxRadius, x + maxRadius, y + height - maxRadius - 1, -1, 1, color);
   } else {
-    fillRectDither(x, y + height - maxRadius, maxRadius, maxRadius, color);  
+    fillRectDither(x, y + height - maxRadius, maxRadius, maxRadius, color);
   }
-} 
+}
 
 void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
   // TODO: Rotate bits

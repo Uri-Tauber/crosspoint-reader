@@ -4,9 +4,9 @@
 
 #include <memory>
 
+#include "RecentBooksStore.h"
 #include "components/themes/BaseTheme.h"
 #include "components/themes/lyra/LyraTheme.h"
-#include "RecentBooksStore.h"
 
 std::unique_ptr<BaseTheme> currentTheme = nullptr;
 const ThemeMetrics* UITheme::currentMetrics = &BaseMetrics::values;
@@ -61,7 +61,8 @@ void UITheme::drawBattery(const GfxRenderer& renderer, Rect rect, bool showPerce
   }
 }
 
-void UITheme::drawButtonHints(const GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3, const char* btn4) {
+void UITheme::drawButtonHints(const GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
+                              const char* btn4) {
   if (currentTheme != nullptr) {
     currentTheme->drawButtonHints(renderer, btn1, btn2, btn3, btn4);
   }
@@ -94,24 +95,24 @@ void UITheme::drawTabBar(const GfxRenderer& renderer, const Rect rect, const std
   }
 }
 
-void UITheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, std::vector<RecentBookInfo> recentBooks, const int selectorIndex,
-    bool& coverRendered, bool& coverBufferStored, bool& bufferRestored, std::function<bool()> storeCoverBuffer) {
+void UITheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBookInfo>& recentBooks,
+                                  const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
+                                  bool& bufferRestored, std::function<bool()> storeCoverBuffer) {
   if (currentTheme != nullptr) {
-    currentTheme->drawRecentBookCover(renderer, rect, recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored, storeCoverBuffer);
+    currentTheme->drawRecentBookCover(renderer, rect, recentBooks, selectorIndex, coverRendered, coverBufferStored,
+                                      bufferRestored, storeCoverBuffer);
   }
 }
 
 void UITheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
-                               const std::function<std::string(int index)>& buttonLabel, bool hasIcon,
-                               const std::function<std::string(int index)>& rowIcon) {
+                             const std::function<std::string(int index)>& buttonLabel, bool hasIcon,
+                             const std::function<std::string(int index)>& rowIcon) {
   if (currentTheme != nullptr) {
-    currentTheme->drawButtonMenu(renderer, rect, buttonCount, selectedIndex,
-                                 buttonLabel, hasIcon,
-                                 rowIcon);
+    currentTheme->drawButtonMenu(renderer, rect, buttonCount, selectedIndex, buttonLabel, hasIcon, rowIcon);
   }
 }
 
-PopupCallbacks UITheme::drawPopupWithProgress(GfxRenderer& renderer, std::string title) {
+PopupCallbacks UITheme::drawPopupWithProgress(GfxRenderer& renderer, const std::string& title) {
   if (currentTheme != nullptr) {
     return currentTheme->drawPopupWithProgress(renderer, title);
   }

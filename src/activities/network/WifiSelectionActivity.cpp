@@ -8,8 +8,8 @@
 #include "MappedInputManager.h"
 #include "WifiCredentialStore.h"
 #include "activities/util/KeyboardEntryActivity.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 void WifiSelectionActivity::taskTrampoline(void* param) {
   auto* self = static_cast<WifiSelectionActivity*>(param);

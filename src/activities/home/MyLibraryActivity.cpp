@@ -5,9 +5,9 @@
 
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
-#include "components/UITheme.h"
 
 namespace {
 constexpr int SKIP_PAGE_MS = 700;
@@ -134,7 +134,8 @@ void MyLibraryActivity::onExit() {
 
 void MyLibraryActivity::loop() {
   // Long press BACK (1s+) goes to root folder
-  if (currentTab == Tab::Files && mappedInput.isPressed(MappedInputManager::Button::Back) && mappedInput.getHeldTime() >= GO_HOME_MS) {
+  if (currentTab == Tab::Files && mappedInput.isPressed(MappedInputManager::Button::Back) &&
+      mappedInput.getHeldTime() >= GO_HOME_MS) {
     if (basepath != "/") {
       basepath = "/";
       loadFiles();
@@ -172,8 +173,8 @@ void MyLibraryActivity::loop() {
         onSelectBook(basepath + files[selectorIndex], currentTab);
       }
     }
-  } 
-  
+  }
+
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     // Short press: go up one directory, or go home if at root
     if (mappedInput.getHeldTime() < GO_HOME_MS) {
@@ -193,8 +194,8 @@ void MyLibraryActivity::loop() {
         onGoHome();
       }
     }
-  } 
-  
+  }
+
   // Tab switching: Left/Right always control tabs
   if (leftReleased || rightReleased) {
     if (currentTab == Tab::Files) {
@@ -244,9 +245,9 @@ void MyLibraryActivity::render() const {
 
   auto folderName = basepath == "/" ? "SD card" : basepath.substr(basepath.rfind('/') + 1).c_str();
   UITheme::drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName);
-  
+
   UITheme::drawTabBar(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
-                     {{"Recent", currentTab == Tab::Recent}, {"Files", currentTab == Tab::Files}});
+                      {{"Recent", currentTab == Tab::Recent}, {"Files", currentTab == Tab::Files}});
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
@@ -255,24 +256,20 @@ void MyLibraryActivity::render() const {
     if (bookTitles.empty()) {
       renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, "No recent books");
     } else {
-      UITheme::drawList(renderer, 
-        Rect{0, contentTop, pageWidth, contentHeight},
-        bookTitles.size(), selectorIndex, [this](int index) { return bookTitles[index]; }, 
-        false, nullptr,
-        false, nullptr);
+      UITheme::drawList(
+          renderer, Rect{0, contentTop, pageWidth, contentHeight}, bookTitles.size(), selectorIndex,
+          [this](int index) { return bookTitles[index]; }, false, nullptr, false, nullptr);
     }
   } else {
     if (files.empty()) {
       renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, "No books found");
     } else {
-      UITheme::drawList(renderer, 
-        Rect{0, contentTop, pageWidth, contentHeight},
-        files.size(), selectorIndex, [this](int index) { return files[index]; }, 
-        false, nullptr,
-        false, nullptr);
+      UITheme::drawList(
+          renderer, Rect{0, contentTop, pageWidth, contentHeight}, files.size(), selectorIndex,
+          [this](int index) { return files[index]; }, false, nullptr, false, nullptr);
     }
   }
-    
+
   // Help text
   const auto labels = mappedInput.mapLabels("« Home", "Open", "Up", "Down");
   UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

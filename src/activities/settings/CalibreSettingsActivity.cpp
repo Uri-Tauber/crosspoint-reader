@@ -10,8 +10,8 @@
 #include "activities/network/CalibreWirelessActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/KeyboardEntryActivity.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 namespace {
 constexpr int MENU_ITEMS = 2;

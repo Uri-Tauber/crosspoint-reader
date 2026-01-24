@@ -13,10 +13,10 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "MappedInputManager.h"
+#include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
-#include "RecentBooksStore.h"
 
 void HomeActivity::taskTrampoline(void* param) {
   auto* self = static_cast<HomeActivity*>(param);
@@ -26,7 +26,7 @@ void HomeActivity::taskTrampoline(void* param) {
 int HomeActivity::getMenuItemCount() const {
   int count = 3;  // My Library, File transfer, Settings
   if (!recentBooks.empty()) {
-    count+= recentBooks.size();
+    count += recentBooks.size();
   }
   if (hasOpdsUrl) {
     count++;
@@ -34,7 +34,7 @@ int HomeActivity::getMenuItemCount() const {
   return count;
 }
 
-void HomeActivity::loadRecentBooks(int maxBooks) { //}, PopupCallbacks& popupCallbacks) {
+void HomeActivity::loadRecentBooks(int maxBooks) {  //}, PopupCallbacks& popupCallbacks) {
   recentsLoading = true;
 
   recentBooks.clear();
@@ -44,10 +44,10 @@ void HomeActivity::loadRecentBooks(int maxBooks) { //}, PopupCallbacks& popupCal
   // if (books.size() > 0) {
   //   popupCallbacks.setup();
   // }
-  
+
   for (const auto& path : books) {
     // popupCallbacks.update(recentBooks.size() * 30); // TODO improve progress calculation
-    
+
     // Limit to maximum number of recent books
     if (recentBooks.size() >= maxBooks) {
       break;
@@ -245,7 +245,7 @@ void HomeActivity::displayTaskLoop() {
 
 void HomeActivity::render() {
   auto metrics = UITheme::getMetrics();
-  
+
   bool bufferRestored = coverBufferStored && restoreCoverBuffer();
   if (!bufferRestored || !firstRenderDone) {
     renderer.clearScreen();
@@ -258,16 +258,13 @@ void HomeActivity::render() {
 
   if (hasContinueReading) {
     if (recentsLoaded) {
-      UITheme::drawRecentBookCover(renderer, 
-        Rect{0, metrics.homeTopPadding, pageWidth, metrics.homeCoverHeight},
-        recentBooks, selectorIndex,
-        coverRendered, coverBufferStored, bufferRestored, 
-        std::bind(&HomeActivity::storeCoverBuffer, this)
-      );
+      UITheme::drawRecentBookCover(renderer, Rect{0, metrics.homeTopPadding, pageWidth, metrics.homeCoverHeight},
+                                   recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored,
+                                   std::bind(&HomeActivity::storeCoverBuffer, this));
     } else if (!recentsLoading && firstRenderDone) {
       recentsLoading = true;
       // PopupCallbacks popupCallbacks = UITheme::drawPopupWithProgress(renderer, "Loading...");
-      loadRecentBooks(metrics.homeRecentBooksCount); //, popupCallbacks);
+      loadRecentBooks(metrics.homeRecentBooksCount);  //, popupCallbacks);
     }
   }
 
@@ -277,12 +274,14 @@ void HomeActivity::render() {
     // Insert Calibre Library after Browse Files
     menuItems.insert(menuItems.begin() + 1, "Calibre Library");
   }
-  
+
   UITheme::drawButtonMenu(
-      renderer, Rect{0, metrics.homeTopPadding + metrics.homeCoverHeight + metrics.verticalSpacing, pageWidth, pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing * 2 + metrics.buttonHintsHeight)},
-      static_cast<int>(menuItems.size()),
-      selectorIndex - recentBooks.size(), [&menuItems](int index) { return std::string(menuItems[index]); },
-      false, nullptr);
+      renderer,
+      Rect{0, metrics.homeTopPadding + metrics.homeCoverHeight + metrics.verticalSpacing, pageWidth,
+           pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing * 2 +
+                         metrics.buttonHintsHeight)},
+      static_cast<int>(menuItems.size()), selectorIndex - recentBooks.size(),
+      [&menuItems](int index) { return std::string(menuItems[index]); }, false, nullptr);
 
   const auto labels = mappedInput.mapLabels("", "Select", "Up", "Down");
   UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

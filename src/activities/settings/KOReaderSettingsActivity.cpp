@@ -8,8 +8,8 @@
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "activities/util/KeyboardEntryActivity.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 namespace {
 constexpr int MENU_ITEMS = 5;

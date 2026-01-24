@@ -3,16 +3,14 @@
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
 
-#include "CrossPointSettings.h"
-#include "MappedInputManager.h"
-#include "fontIds.h"
-#include "components/UITheme.h"
-
 #include "CalibreSettingsActivity.h"
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
 #include "KOReaderSettingsActivity.h"
+#include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
+#include "components/UITheme.h"
+#include "fontIds.h"
 
 const char* SettingsActivity::categoryNames[categoryCount] = {"Display", "Reader", "Controls", "System"};
 
@@ -26,7 +24,7 @@ const SettingInfo displaySettings[displaySettingsCount] = {
     SettingInfo::Enum("Hide Battery %", &CrossPointSettings::hideBatteryPercentage, {"Never", "In Reader", "Always"}),
     SettingInfo::Enum("Refresh Frequency", &CrossPointSettings::refreshFrequency,
                       {"1 page", "5 pages", "10 pages", "15 pages", "30 pages"}),
-    SettingInfo::Enum("UI Theme", &CrossPointSettings::uiTheme, {"Classic", "Lyra"}),                      
+    SettingInfo::Enum("UI Theme", &CrossPointSettings::uiTheme, {"Classic", "Lyra"}),
 };
 
 constexpr int readerSettingsCount = 9;
@@ -70,9 +68,9 @@ void SettingsActivity::onEnter() {
   renderingMutex = xSemaphoreCreateMutex();
 
   // Reset selection to first category
-  selectedCategoryIndex = 0;  
+  selectedCategoryIndex = 0;
   selectedSettingIndex = 0;
-  
+
   // Initialize with first category (Display)
   settingsList = displaySettings;
   settingsCount = displaySettingsCount;
@@ -256,13 +254,14 @@ void SettingsActivity::render() const {
   UITheme::drawTabBar(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
                       tabs);
 
-
-  UITheme::drawList(renderer, 
-      Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing, pageWidth, pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.buttonHintsHeight + metrics.verticalSpacing * 2)},
-      settingsCount, selectedSettingIndex,
-      [this](int index) { return std::string(settingsList[index].name); }, 
-      false, nullptr, 
-      true, [this](int i) {
+  UITheme::drawList(
+      renderer,
+      Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing, pageWidth,
+           pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.buttonHintsHeight +
+                         metrics.verticalSpacing * 2)},
+      settingsCount, selectedSettingIndex, [this](int index) { return std::string(settingsList[index].name); }, false,
+      nullptr, true,
+      [this](int i) {
         const auto& setting = settingsList[i];
         std::string valueText = "";
         if (settingsList[i].type == SettingType::TOGGLE && settingsList[i].valuePtr != nullptr) {
@@ -275,10 +274,12 @@ void SettingsActivity::render() const {
           valueText = std::to_string(SETTINGS.*(settingsList[i].valuePtr));
         }
         return valueText;
-  });
+      });
 
   // Draw version text
-  renderer.drawText(SMALL_FONT_ID, pageWidth - metrics.versionTextRightX - renderer.getTextWidth(SMALL_FONT_ID, CROSSPOINT_VERSION), metrics.versionTextY, CROSSPOINT_VERSION);
+  renderer.drawText(SMALL_FONT_ID,
+                    pageWidth - metrics.versionTextRightX - renderer.getTextWidth(SMALL_FONT_ID, CROSSPOINT_VERSION),
+                    metrics.versionTextY, CROSSPOINT_VERSION);
 
   // Draw help text
   const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");

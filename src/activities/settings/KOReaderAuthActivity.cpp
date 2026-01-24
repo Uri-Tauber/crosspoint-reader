@@ -7,8 +7,8 @@
 #include "KOReaderSyncClient.h"
 #include "MappedInputManager.h"
 #include "activities/network/WifiSelectionActivity.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 void KOReaderAuthActivity::taskTrampoline(void* param) {
   auto* self = static_cast<KOReaderAuthActivity*>(param);

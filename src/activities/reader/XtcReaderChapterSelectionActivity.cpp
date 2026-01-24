@@ -3,8 +3,8 @@
 #include <GfxRenderer.h>
 
 #include "MappedInputManager.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 namespace {
 constexpr int SKIP_PAGE_MS = 700;

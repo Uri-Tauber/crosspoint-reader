@@ -5,8 +5,8 @@
 #include <SDCardManager.h>
 
 #include "MappedInputManager.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 void ClearCacheActivity::taskTrampoline(void* param) {
   auto* self = static_cast<ClearCacheActivity*>(param);

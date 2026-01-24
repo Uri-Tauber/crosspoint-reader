@@ -47,9 +47,9 @@ class SettingsActivity final : public ActivityWithSubactivity {
   bool updateRequired = false;
   int selectedCategoryIndex = 0;  // Currently selected category
   int selectedSettingIndex = 0;
-  int settingsCount;
-  const SettingInfo* settingsList;
-  
+  int settingsCount = 0;
+  const SettingInfo* settingsList = nullptr;
+
   const std::function<void()> onGoHome;
 
   static constexpr int categoryCount = 4;

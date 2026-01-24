@@ -328,7 +328,8 @@ void EpubReaderActivity::renderScreen() {
 
       if (!section->createSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
                                       SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
-                                      viewportHeight, SETTINGS.hyphenationEnabled, popupCallbacks.setup, popupCallbacks.update)) {
+                                      viewportHeight, SETTINGS.hyphenationEnabled, popupCallbacks.setup,
+                                      popupCallbacks.update)) {
         Serial.printf("[%lu] [ERS] Failed to persist page data to SD\n", millis());
         section.reset();
         return;
@@ -460,7 +461,8 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
   }
 
   if (showBattery) {
-    UITheme::drawBattery(renderer, Rect{orientedMarginLeft + 1, textY, metrics.batteryWidth, metrics.batteryHeight}, showBatteryPercentage);
+    UITheme::drawBattery(renderer, Rect{orientedMarginLeft + 1, textY, metrics.batteryWidth, metrics.batteryHeight},
+                         showBatteryPercentage);
   }
 
   if (showChapterTitle) {

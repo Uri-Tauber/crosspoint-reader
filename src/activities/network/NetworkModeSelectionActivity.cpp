@@ -3,8 +3,8 @@
 #include <GfxRenderer.h>
 
 #include "MappedInputManager.h"
-#include "fontIds.h"
 #include "components/UITheme.h"
+#include "fontIds.h"
 
 namespace {
 constexpr int MENU_ITEM_COUNT = 2;

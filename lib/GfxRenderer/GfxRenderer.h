@@ -11,11 +11,11 @@
 // 0 = transparent, 1-16 = gray levels (white to black)
 using Color = uint8_t;
 
-constexpr Color COLOR_CLEAR = 0x00;       
-constexpr Color COLOR_WHITE = 0x01;       
-constexpr Color COLOR_LIGHT_GRAY = 0x05;  
-constexpr Color COLOR_DARK_GRAY = 0x0A;   
-constexpr Color COLOR_BLACK = 0x10;       
+constexpr Color COLOR_CLEAR = 0x00;
+constexpr Color COLOR_WHITE = 0x01;
+constexpr Color COLOR_LIGHT_GRAY = 0x05;
+constexpr Color COLOR_DARK_GRAY = 0x0A;
+constexpr Color COLOR_BLACK = 0x10;
 
 class GfxRenderer {
  public:
@@ -78,13 +78,15 @@ class GfxRenderer {
   void drawLine(int x1, int y1, int x2, int y2, int lineWidth, bool state) const;
   void drawArc(int maxRadius, int cx, int cy, int xDir, int yDir, int lineWidth, bool state) const;
   void drawRect(int x, int y, int width, int height, bool state = true) const;
-  void drawRect( int x, int y, int width, int height, int lineWidth, bool state) const;
+  void drawRect(int x, int y, int width, int height, int lineWidth, bool state) const;
   void drawRoundedRect(int x, int y, int width, int height, int lineWidth, int cornerRadius, bool state) const;
-  void drawRoundedRect(int x, int y, int width, int height, int lineWidth, int cornerRadius, bool roundTopLeft, bool roundTopRight, bool roundBottomLeft, bool roundBottomRight, bool state) const;
+  void drawRoundedRect(int x, int y, int width, int height, int lineWidth, int cornerRadius, bool roundTopLeft,
+                       bool roundTopRight, bool roundBottomLeft, bool roundBottomRight, bool state) const;
   void fillRect(int x, int y, int width, int height, bool state = true) const;
   void fillRectDither(int x, int y, int width, int height, Color color) const;
   void fillRoundedRect(int x, int y, int width, int height, int cornerRadius, Color color) const;
-  void fillRoundedRect(int x, int y, int width, int height, int cornerRadius, bool roundTopLeft, bool roundTopRight, bool roundBottomLeft, bool roundBottomRight, Color color) const;
+  void fillRoundedRect(int x, int y, int width, int height, int cornerRadius, bool roundTopLeft, bool roundTopRight,
+                       bool roundBottomLeft, bool roundBottomRight, Color color) const;
   void drawImage(const uint8_t bitmap[], int x, int y, int width, int height) const;
   void drawIcon(const uint8_t bitmap[], int x, int y, int width, int height) const;
   void drawBitmap(const Bitmap& bitmap, int x, int y, int maxWidth, int maxHeight, float cropX = 0,

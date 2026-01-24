@@ -31,21 +31,22 @@ class HomeActivity final : public Activity {
   const std::function<void()> onSettingsOpen;
   const std::function<void()> onFileTransferOpen;
   const std::function<void()> onOpdsBrowserOpen;
-  
+
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void render();
   int getMenuItemCount() const;
-  bool storeCoverBuffer();    // Store frame buffer for cover image
-  bool restoreCoverBuffer();  // Restore frame buffer from stored cover
-  void freeCoverBuffer();     // Free the stored cover buffer
-  void loadRecentBooks(int maxBooks); //, PopupCallbacks& popupCallbacks);
+  bool storeCoverBuffer();             // Store frame buffer for cover image
+  bool restoreCoverBuffer();           // Restore frame buffer from stored cover
+  void freeCoverBuffer();              // Free the stored cover buffer
+  void loadRecentBooks(int maxBooks);  //, PopupCallbacks& popupCallbacks);
 
  public:
-  explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
-                        const std::function<void(const std::string& path, MyLibraryActivity::Tab fromTab)>& onSelectBook, const std::function<void()>& onMyLibraryOpen,
-                        const std::function<void()>& onSettingsOpen, const std::function<void()>& onFileTransferOpen,
-                        const std::function<void()>& onOpdsBrowserOpen)
+  explicit HomeActivity(
+      GfxRenderer& renderer, MappedInputManager& mappedInput,
+      const std::function<void(const std::string& path, MyLibraryActivity::Tab fromTab)>& onSelectBook,
+      const std::function<void()>& onMyLibraryOpen, const std::function<void()>& onSettingsOpen,
+      const std::function<void()>& onFileTransferOpen, const std::function<void()>& onOpdsBrowserOpen)
       : Activity("Home", renderer, mappedInput),
         onSelectBook(onSelectBook),
         onMyLibraryOpen(onMyLibraryOpen),

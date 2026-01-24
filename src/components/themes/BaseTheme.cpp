@@ -1,29 +1,30 @@
 #include "BaseTheme.h"
 
 #include <GfxRenderer.h>
+#include <SDCardManager.h>
 
 #include <cstdint>
 #include <string>
 
 #include "Battery.h"
+#include "RecentBooksStore.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
-#include <SDCardManager.h>
-#include "RecentBooksStore.h"
 
 // Internal constants
 namespace {
-  constexpr int batteryPercentSpacing = 4;
-  constexpr int homeMenuMargin = 20;
-  constexpr int homeMarginTop = 30;
-}
+constexpr int batteryPercentSpacing = 4;
+constexpr int homeMenuMargin = 20;
+constexpr int homeMarginTop = 30;
+}  // namespace
 
 void BaseTheme::drawBattery(const GfxRenderer& renderer, Rect rect, const bool showPercentage) {
-    // Left aligned battery icon and percentage
-    // TODO refactor this so the percentage doesnt change after we position it
+  // Left aligned battery icon and percentage
+  // TODO refactor this so the percentage doesnt change after we position it
   const uint16_t percentage = battery.readPercentage();
   const auto percentageText = showPercentage ? std::to_string(percentage) + "%" : "";
-  renderer.drawText(SMALL_FONT_ID, rect.x + batteryPercentSpacing + BaseMetrics::values.batteryWidth, rect.y, percentageText.c_str());
+  renderer.drawText(SMALL_FONT_ID, rect.x + batteryPercentSpacing + BaseMetrics::values.batteryWidth, rect.y,
+                    percentageText.c_str());
   // 1 column on left, 2 columns on right, 5 columns of battery body
   const int x = rect.x;
   const int y = rect.y + 6;
@@ -72,9 +73,8 @@ void BaseTheme::drawProgressBar(const GfxRenderer& renderer, Rect rect, const si
   renderer.drawCenteredText(UI_10_FONT_ID, rect.y + rect.height + 15, percentText.c_str());
 }
 
-
 void BaseTheme::drawButtonHints(const GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
-                                  const char* btn4) {
+                                const char* btn4) {
   // TODO: Fix rotated hints
   // const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
   // renderer.setOrientation(GfxRenderer::Orientation::Portrait);
@@ -82,8 +82,8 @@ void BaseTheme::drawButtonHints(const GfxRenderer& renderer, const char* btn1, c
   const int pageHeight = renderer.getScreenHeight();
   constexpr int buttonWidth = 106;
   constexpr int buttonHeight = BaseMetrics::values.buttonHintsHeight;
-  constexpr int buttonY = BaseMetrics::values.buttonHintsHeight;     // Distance from bottom
-  constexpr int textYOffset = 7;  // Distance from top of button to text baseline
+  constexpr int buttonY = BaseMetrics::values.buttonHintsHeight;  // Distance from bottom
+  constexpr int textYOffset = 7;                                  // Distance from top of button to text baseline
   constexpr int buttonPositions[] = {25, 130, 245, 350};
   const char* labels[] = {btn1, btn2, btn3, btn4};
 
@@ -104,9 +104,9 @@ void BaseTheme::drawButtonHints(const GfxRenderer& renderer, const char* btn1, c
 
 void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) {
   const int screenWidth = renderer.getScreenWidth();
-  constexpr int buttonWidth = BaseMetrics::values.buttonHintsHeight;   // Width on screen (height when rotated)
-  constexpr int buttonHeight = 80;  // Height on screen (width when rotated)
-  constexpr int buttonX = 5;        // Distance from right edge
+  constexpr int buttonWidth = BaseMetrics::values.buttonHintsHeight;  // Width on screen (height when rotated)
+  constexpr int buttonHeight = 80;                                    // Height on screen (width when rotated)
+  constexpr int buttonX = 5;                                          // Distance from right edge
   // Position for the button group - buttons share a border so they're adjacent
   constexpr int topButtonY = 345;  // Top button position
 
@@ -131,8 +131,9 @@ void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* top
   if (bottomBtn != nullptr && bottomBtn[0] != '\0') {
     renderer.drawLine(x, topButtonY + buttonHeight, x, topButtonY + 2 * buttonHeight - 1);  // Left
     renderer.drawLine(x + buttonWidth - 1, topButtonY + buttonHeight, x + buttonWidth - 1,
-             topButtonY + 2 * buttonHeight - 1);                                                             // Right
-    renderer.drawLine(x, topButtonY + 2 * buttonHeight - 1, x + buttonWidth - 1, topButtonY + 2 * buttonHeight - 1);  // Bottom
+                      topButtonY + 2 * buttonHeight - 1);  // Right
+    renderer.drawLine(x, topButtonY + 2 * buttonHeight - 1, x + buttonWidth - 1,
+                      topButtonY + 2 * buttonHeight - 1);  // Bottom
   }
 
   // Draw text for each button
@@ -168,11 +169,14 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     const int scrollBarY = rect.y + ((rect.height - scrollBarHeight) * currentPage) / (totalPages - 1);
     const int scrollBarX = rect.x + rect.width - BaseMetrics::values.scrollBarRightOffset;
     renderer.drawLine(scrollBarX, rect.y, scrollBarX, rect.y + rect.height, true);
-    renderer.fillRect(scrollBarX - BaseMetrics::values.scrollBarWidth, scrollBarY, BaseMetrics::values.scrollBarWidth, scrollBarHeight, true);
+    renderer.fillRect(scrollBarX - BaseMetrics::values.scrollBarWidth, scrollBarY, BaseMetrics::values.scrollBarWidth,
+                      scrollBarHeight, true);
   }
 
   // Draw selection
-  int contentWidth = rect.width - (totalPages > 1 ? (BaseMetrics::values.scrollBarWidth + BaseMetrics::values.scrollBarRightOffset) : 1);
+  int contentWidth =
+      rect.width -
+      (totalPages > 1 ? (BaseMetrics::values.scrollBarWidth + BaseMetrics::values.scrollBarRightOffset) : 1);
   renderer.fillRect(0, rect.y + selectedIndex % pageItems * rowHeight - 2, contentWidth, rowHeight);
   // Draw all items
   const auto pageStartIndex = selectedIndex / pageItems * pageItems;
@@ -182,27 +186,32 @@ void BaseTheme::drawList(const GfxRenderer& renderer, Rect rect, int itemCount, 
     // Draw name
     auto itemName = rowTitle(i);
     auto item = renderer.truncatedText(UI_10_FONT_ID, itemName.c_str(),
-                                       contentWidth - BaseMetrics::values.contentSidePadding * 2 - (hasValue ? 60 : 0));  // TODO truncate according to value width?
-    renderer.drawText(UI_10_FONT_ID, rect.x + BaseMetrics::values.contentSidePadding, itemY, item.c_str(), i != selectedIndex);
+                                       contentWidth - BaseMetrics::values.contentSidePadding * 2 -
+                                           (hasValue ? 60 : 0));  // TODO truncate according to value width?
+    renderer.drawText(UI_10_FONT_ID, rect.x + BaseMetrics::values.contentSidePadding, itemY, item.c_str(),
+                      i != selectedIndex);
 
     if (hasValue) {
       // Draw value
       std::string valueText = rowValue(i);
       const auto textWidth = renderer.getTextWidth(UI_10_FONT_ID, valueText.c_str());
-      renderer.drawText(UI_10_FONT_ID, contentWidth - BaseMetrics::values.contentSidePadding - textWidth, itemY, valueText.c_str(), i != selectedIndex);
+      renderer.drawText(UI_10_FONT_ID, contentWidth - BaseMetrics::values.contentSidePadding - textWidth, itemY,
+                        valueText.c_str(), i != selectedIndex);
     }
   }
 }
 
 void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* title) {
-  const bool showBatteryPercentage = SETTINGS.hideBatteryPercentage != CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_ALWAYS;
+  const bool showBatteryPercentage =
+      SETTINGS.hideBatteryPercentage != CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_ALWAYS;
   int batteryX = rect.x + rect.width - BaseMetrics::values.contentSidePadding - BaseMetrics::values.batteryWidth;
   if (showBatteryPercentage) {
     const uint16_t percentage = battery.readPercentage();
     const auto percentageText = std::to_string(percentage) + "%";
     batteryX -= renderer.getTextWidth(SMALL_FONT_ID, percentageText.c_str());
   }
-  drawBattery(renderer, Rect{batteryX, rect.y + 5, BaseMetrics::values.batteryWidth, BaseMetrics::values.batteryHeight});
+  drawBattery(renderer,
+              Rect{batteryX, rect.y + 5, BaseMetrics::values.batteryWidth, BaseMetrics::values.batteryHeight});
 
   if (title) {
     renderer.drawCenteredText(UI_12_FONT_ID, rect.y + 5, title, true, EpdFontFamily::BOLD);
@@ -236,10 +245,9 @@ void BaseTheme::drawTabBar(const GfxRenderer& renderer, const Rect rect, const s
 
 // Draw the "Recent Book" cover card on the home screen
 // TODO: Refactor method to make it cleaner, split into smaller methods
-void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, 
-  std::vector<RecentBookInfo> recentBooks, const int selectorIndex,
-  bool& coverRendered, bool& coverBufferStored, bool& bufferRestored, std::function<bool()> storeCoverBuffer
-) {
+void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std::vector<RecentBookInfo>& recentBooks,
+                                    const int selectorIndex, bool& coverRendered, bool& coverBufferStored,
+                                    bool& bufferRestored, std::function<bool()> storeCoverBuffer) {
   // --- Top "book" card for the current title (selectorIndex == 0) ---
   const int bookWidth = rect.width / 2;
   const int bookHeight = rect.height;
@@ -349,8 +357,8 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect,
   }
 
   if (hasContinueReading) {
-      const std::string& lastBookTitle = recentBooks[0].title;
-      const std::string& lastBookAuthor = recentBooks[0].author;
+    const std::string& lastBookTitle = recentBooks[0].title;
+    const std::string& lastBookAuthor = recentBooks[0].author;
 
     // Invert text colors based on selection state:
     // - With cover: selected = white text on black box, unselected = black text on white box
@@ -530,27 +538,31 @@ void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
                                const std::function<std::string(int index)>& buttonLabel, bool hasIcon,
                                const std::function<std::string(int index)>& rowIcon) {
   for (int i = 0; i < buttonCount; ++i) {
-    const int tileY = BaseMetrics::values.verticalSpacing + rect.y + static_cast<int>(i) * (BaseMetrics::values.menuRowHeight + BaseMetrics::values.menuSpacing);
+    const int tileY = BaseMetrics::values.verticalSpacing + rect.y +
+                      static_cast<int>(i) * (BaseMetrics::values.menuRowHeight + BaseMetrics::values.menuSpacing);
 
     const bool selected = selectedIndex == i;
 
     if (selected) {
-      renderer.fillRect(rect.x + BaseMetrics::values.contentSidePadding, tileY, rect.width - BaseMetrics::values.contentSidePadding * 2, BaseMetrics::values.menuRowHeight);
+      renderer.fillRect(rect.x + BaseMetrics::values.contentSidePadding, tileY,
+                        rect.width - BaseMetrics::values.contentSidePadding * 2, BaseMetrics::values.menuRowHeight);
     } else {
-      renderer.drawRect(rect.x + BaseMetrics::values.contentSidePadding, tileY, rect.width - BaseMetrics::values.contentSidePadding * 2, BaseMetrics::values.menuRowHeight);
+      renderer.drawRect(rect.x + BaseMetrics::values.contentSidePadding, tileY,
+                        rect.width - BaseMetrics::values.contentSidePadding * 2, BaseMetrics::values.menuRowHeight);
     }
 
     const char* label = buttonLabel(i).c_str();
     const int textWidth = renderer.getTextWidth(UI_10_FONT_ID, label);
     const int textX = rect.x + (rect.width - textWidth) / 2;
     const int lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
-    const int textY = tileY + (BaseMetrics::values.menuRowHeight - lineHeight) / 2;  // vertically centered assuming y is top of text
+    const int textY =
+        tileY + (BaseMetrics::values.menuRowHeight - lineHeight) / 2;  // vertically centered assuming y is top of text
     // Invert text when the tile is selected, to contrast with the filled background
     renderer.drawText(UI_10_FONT_ID, textX, textY, label, selectedIndex != i);
   }
 }
 
-PopupCallbacks BaseTheme::drawPopupWithProgress(GfxRenderer& renderer, std::string title) {
+PopupCallbacks BaseTheme::drawPopupWithProgress(GfxRenderer& renderer, const std::string& title) {
   // Progress bar dimensions
   constexpr int barWidth = 200;
   constexpr int barHeight = 10;
@@ -573,7 +585,8 @@ PopupCallbacks BaseTheme::drawPopupWithProgress(GfxRenderer& renderer, std::stri
   renderer.displayBuffer();
 
   // Setup callback - only called for chapters >= 50KB, redraws with progress bar
-  auto setup = [this, &renderer, boxXWithBar, boxWidthWithBar, boxHeightWithBar, boxMargin, title, barX, barY, barWidth, barHeight, boxY] {
+  auto setup = [this, &renderer, boxXWithBar, boxWidthWithBar, boxHeightWithBar, boxMargin, title, barX, barY, barWidth,
+                barHeight, boxY] {
     renderer.fillRect(boxXWithBar, boxY, boxWidthWithBar, boxHeightWithBar, false);
     renderer.drawText(UI_12_FONT_ID, boxXWithBar + boxMargin, boxY + boxMargin, title.c_str());
     renderer.drawRect(boxXWithBar + 5, boxY + 5, boxWidthWithBar - 10, boxHeightWithBar - 10);
