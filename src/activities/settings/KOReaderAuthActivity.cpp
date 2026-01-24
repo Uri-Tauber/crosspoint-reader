@@ -8,6 +8,7 @@
 #include "MappedInputManager.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "fontIds.h"
+#include "components/UITheme.h"
 
 void KOReaderAuthActivity::taskTrampoline(void* param) {
   auto* self = static_cast<KOReaderAuthActivity*>(param);
@@ -136,7 +137,7 @@ void KOReaderAuthActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, "KOReader sync is ready to use");
 
     const auto labels = mappedInput.mapLabels("Done", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
@@ -146,7 +147,7 @@ void KOReaderAuthActivity::render() {
     renderer.drawCenteredText(UI_10_FONT_ID, 320, errorMessage.c_str());
 
     const auto labels = mappedInput.mapLabels("Back", "", "", "");
-    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }

@@ -2,6 +2,7 @@
 
 #include "MappedInputManager.h"
 #include "fontIds.h"
+#include "components/UITheme.h"
 
 // Keyboard layouts - lowercase
 const char* const KeyboardEntryActivity::keyboard[NUM_ROWS] = {
@@ -343,10 +344,10 @@ void KeyboardEntryActivity::render() const {
 
   // Draw help text
   const auto labels = mappedInput.mapLabels("« Back", "Select", "Left", "Right");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Draw side button hints for Up/Down navigation
-  renderer.drawSideButtonHints(UI_10_FONT_ID, "Up", "Down");
+  UITheme::drawSideButtonHints(renderer, "Up", "Down");
 
   renderer.displayBuffer();
 }

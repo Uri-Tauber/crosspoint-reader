@@ -8,7 +8,7 @@
 #include <cstring>
 
 #include "MappedInputManager.h"
-#include "ScreenComponents.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/StringUtils.h"
 
@@ -711,7 +711,7 @@ void CalibreWirelessActivity::render() const {
     constexpr int barHeight = 20;
     constexpr int barX = 50;
     const int barY = statusY + 20;
-    ScreenComponents::drawProgressBar(renderer, barX, barY, barWidth, barHeight, bytesReceived, currentFileSize);
+    UITheme::drawProgressBar(renderer, Rect{barX, barY, barWidth, barHeight}, bytesReceived, currentFileSize);
   }
 
   // Draw error if present
@@ -721,7 +721,7 @@ void CalibreWirelessActivity::render() const {
 
   // Draw button hints
   const auto labels = mappedInput.mapLabels("Back", "", "", "");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }

@@ -2,6 +2,13 @@
 #include <string>
 #include <vector>
 
+struct RecentBookInfo {
+  std::string title;
+  std::string author;
+  std::string coverBmpPath;
+  std::string path;
+};
+
 class RecentBooksStore {
   // Static instance
   static RecentBooksStore instance;

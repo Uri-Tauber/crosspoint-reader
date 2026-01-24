@@ -24,6 +24,7 @@
 #include "activities/reader/ReaderActivity.h"
 #include "activities/settings/SettingsActivity.h"
 #include "activities/util/FullScreenMessageActivity.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 #define SPI_FQ 40000000
@@ -219,7 +220,6 @@ void onGoToReader(const std::string& initialEpubPath, MyLibraryActivity::Tab fro
   enterNewActivity(
       new ReaderActivity(renderer, mappedInputManager, initialEpubPath, fromTab, onGoHome, onGoToMyLibraryWithTab));
 }
-void onContinueReading() { onGoToReader(APP_STATE.openEpubPath, MyLibraryActivity::Tab::Recent); }
 
 void onGoToFileTransfer() {
   exitActivity();
@@ -248,7 +248,7 @@ void onGoToBrowser() {
 
 void onGoHome() {
   exitActivity();
-  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onContinueReading, onGoToMyLibrary, onGoToSettings,
+  enterNewActivity(new HomeActivity(renderer, mappedInputManager, onGoToReader, onGoToMyLibrary, onGoToSettings,
                                     onGoToFileTransfer, onGoToBrowser));
 }
 
@@ -303,6 +303,7 @@ void setup() {
   }
 
   inputManager.begin();
+
   // Initialize pins
   pinMode(BAT_GPIO0, INPUT);
 
@@ -321,6 +322,7 @@ void setup() {
 
   SETTINGS.loadFromFile();
   KOREADER_STORE.loadFromFile();
+  UITheme::initialize();
 
   if (!isWakeupAfterFlashing()) {
     // For normal wakeups (not immediately after flashing), verify long press

@@ -11,6 +11,7 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "fontIds.h"
+#include "components/UITheme.h"
 
 namespace {
 constexpr int MENU_ITEMS = 2;
@@ -163,7 +164,7 @@ void CalibreSettingsActivity::render() {
 
   // Draw button hints
   const auto labels = mappedInput.mapLabels("« Back", "Select", "", "");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  UITheme::drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }
