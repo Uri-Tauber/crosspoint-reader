@@ -10,7 +10,7 @@ void EpubReaderMenuActivity::onEnter() {
 
 void EpubReaderMenuActivity::loop() {
   if (mappedInput.wasReleased(MappedInputManager::Button::Up)) {
-    selectorIndex = (selectorIndex + 1) % 2;
+    selectorIndex = (selectorIndex + 2 - 1) % 2;
     renderScreen();
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
     selectorIndex = (selectorIndex + 1) % 2;
