@@ -281,34 +281,77 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   }
 
   // Rest of startElement logic for pass 2...
+  if (strcmp(name, "sup") == 0) {
+    self->supDepth = self->depth;
+
+    // Case A: Found <sup> inside a normal <a> (which wasn't marked as a note yet)
+    // Example: <a href="..."><sup>*</sup></a>
+    if (self->anchorDepth != -1 && !self->insideNoteref) {
+      Serial.printf("[%lu] [NOTEREF] Found <sup> inside <a>, promoting to noteref\n", millis());
+
+      // 1. Flush the current word buffer (text before the sup is normal text)
+      if (self->partWordBufferIndex > 0) {
+        // Copy of the existing flush logic
+        EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
+        if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) fontStyle = EpdFontFamily::BOLD_ITALIC;
+        else if (self->boldUntilDepth < self->depth) fontStyle = EpdFontFamily::BOLD;
+        else if (self->italicUntilDepth < self->depth) fontStyle = EpdFontFamily::ITALIC;
+
+        self->partWordBuffer[self->partWordBufferIndex] = '\0';
+        self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
+        self->partWordBufferIndex = 0;
+      }
+
+      // 2. Activate footnote mode
+      self->insideNoteref = true;
+      self->currentNoterefTextLen = 0;
+      self->currentNoterefText[0] = '\0';
+      // Note: The href was already saved to currentNoterefHref when the <a> was opened (see below)
+    }
+  }
+
+  // === Update the existing A block ===
   if (strcmp(name, "a") == 0) {
     const char* epubType = getAttribute(atts, "epub:type");
     const char* href = getAttribute(atts, "href");
 
-    // Detect epub:type="noteref" OR href="#rnoteX" pattern
+    // Save Anchor state
+    self->anchorDepth = self->depth;
+
+    // Optimistically save the href, in case this becomes a footnote later (via internal <sup>)
+    if (!self->insideNoteref) {
+      if (href) {
+        strncpy(self->currentNoterefHref, href, 127);
+        self->currentNoterefHref[127] = '\0';
+      } else {
+        self->currentNoterefHref[0] = '\0';
+      }
+    }
+
+    // Footnote detection: via epub:type, rnote pattern, or if we are already inside a <sup>
+    // Case B: Found <a> inside <sup>
+    // Example: <sup><a href="...">1</a></sup>
     bool isNoteref = (epubType && strcmp(epubType, "noteref") == 0);
 
-    // Also detect links with href starting with "#rnote" (reverse note pattern)
     if (!isNoteref && href && href[0] == '#' && strncmp(href + 1, "rnote", 5) == 0) {
       isNoteref = true;
-      Serial.printf("[%lu] [NOTEREF] Detected reverse note pattern: href=%s\n", millis(), href);
+    }
+
+    // New detection: if we are inside SUP, this link is a footnote
+    if (!isNoteref && self->supDepth != -1) {
+      isNoteref = true;
+      Serial.printf("[%lu] [NOTEREF] Found <a> inside <sup>, treating as noteref\n", millis());
     }
 
     if (isNoteref) {
+      // ... (Rest of original isNoteref logic) ...
       Serial.printf("[%lu] [NOTEREF] Found noteref: href=%s\n", millis(), href ? href : "null");
 
-      // Flush any pending word before starting noteref collection
-      // This ensures proper word order in the text flow
+      // Flush word buffer
       if (self->partWordBufferIndex > 0) {
+        // ... (flush logic) ...
         EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-        if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-          fontStyle = EpdFontFamily::BOLD_ITALIC;
-        } else if (self->boldUntilDepth < self->depth) {
-          fontStyle = EpdFontFamily::BOLD;
-        } else if (self->italicUntilDepth < self->depth) {
-          fontStyle = EpdFontFamily::ITALIC;
-        }
-
+        // ... calculate style ...
         self->partWordBuffer[self->partWordBufferIndex] = '\0';
         self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
         self->partWordBufferIndex = 0;
@@ -318,17 +361,6 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       self->currentNoterefTextLen = 0;
       self->currentNoterefText[0] = '\0';
 
-      if (href) {
-        self->currentNoterefHrefLen = 0;
-        const char* src = href;
-        while (*src && self->currentNoterefHrefLen < 127) {
-          self->currentNoterefHref[self->currentNoterefHrefLen++] = *src++;
-        }
-        self->currentNoterefHref[self->currentNoterefHrefLen] = '\0';
-      } else {
-        self->currentNoterefHref[0] = '\0';
-        self->currentNoterefHrefLen = 0;
-      }
       self->depth += 1;
       return;
     }
@@ -644,56 +676,86 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     return;
   }
 
-  // Rest of endElement logic for pass 2 - MODIFIED
-  if (strcmp(name, "a") == 0 && self->insideNoteref) {
-    self->insideNoteref = false;
+  // ---------------------------------------------------------
+  // PASS 2: Normal Parsing Logic
+  // ---------------------------------------------------------
 
-    if (self->currentNoterefTextLen > 0) {
-      Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(), self->currentNoterefText, self->currentNoterefHref);
+  // [NEW] 1. Reset Superscript State
+  // We must ensure we know when we are leaving a <sup> tag
+  if (strcmp(name, "sup") == 0) {
+    if (self->supDepth == self->depth) {
+      self->supDepth = -1;
+    }
+  }
 
-      // Add footnote first (this does the rewriting)
-      self->addFootnoteToCurrentPage(self->currentNoterefText, self->currentNoterefHref);
+  // [MODIFIED] 2. Handle 'a' tags (Anchors/Footnotes)
+  // We check "a" generally now, to handle both Noterefs AND resetting regular links
+  if (strcmp(name, "a") == 0) {
 
-      // Then call callback with the REWRITTEN href from currentPageFootnotes
-      if (self->noterefCallback && self->currentPageFootnoteCount > 0) {
-        Noteref noteref;
-        strncpy(noteref.number, self->currentNoterefText, 15);
-        noteref.number[15] = '\0';
+    // Track if this was a noteref so we can return early later
+    bool wasNoteref = self->insideNoteref;
 
-        // Use the STORED href which has been rewritten
-        FootnoteEntry* lastFootnote = &self->currentPageFootnotes[self->currentPageFootnoteCount - 1];
-        strncpy(noteref.href, lastFootnote->href, 127);
-        noteref.href[127] = '\0';
+    if (self->insideNoteref) {
+      self->insideNoteref = false;
 
-        self->noterefCallback(noteref);
+      if (self->currentNoterefTextLen > 0) {
+        Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(), self->currentNoterefText, self->currentNoterefHref);
+
+        // Add footnote first (this does the rewriting)
+        self->addFootnoteToCurrentPage(self->currentNoterefText, self->currentNoterefHref);
+
+        // Then call callback with the REWRITTEN href from currentPageFootnotes
+        if (self->noterefCallback && self->currentPageFootnoteCount > 0) {
+          Noteref noteref;
+          strncpy(noteref.number, self->currentNoterefText, 15);
+          noteref.number[15] = '\0';
+
+          // Use the STORED href which has been rewritten
+          FootnoteEntry* lastFootnote = &self->currentPageFootnotes[self->currentPageFootnoteCount - 1];
+          strncpy(noteref.href, lastFootnote->href, 127);
+          noteref.href[127] = '\0';
+
+          self->noterefCallback(noteref);
+        }
+
+        // Ensure [1] appears inline after the word it references
+        EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
+        if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
+          fontStyle = EpdFontFamily::BOLD_ITALIC;
+        } else if (self->boldUntilDepth < self->depth) {
+          fontStyle = EpdFontFamily::BOLD;
+        } else if (self->italicUntilDepth < self->depth) {
+          fontStyle = EpdFontFamily::ITALIC;
+        }
+
+        // Format the noteref text with brackets
+        char formattedNoteref[32];
+        snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentNoterefText);
+
+        // Add it as a word to the current text block
+        if (self->currentTextBlock) {
+          self->currentTextBlock->addWord(formattedNoteref, fontStyle);
+        }
       }
 
-      // Ensure [1] appears inline after the word it references
-      EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-      if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-        fontStyle = EpdFontFamily::BOLD_ITALIC;
-      } else if (self->boldUntilDepth < self->depth) {
-        fontStyle = EpdFontFamily::BOLD;
-      } else if (self->italicUntilDepth < self->depth) {
-        fontStyle = EpdFontFamily::ITALIC;
-      }
-
-      // Format the noteref text with brackets
-      char formattedNoteref[32];
-      snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentNoterefText);
-
-      // Add it as a word to the current text block
-      if (self->currentTextBlock) {
-        self->currentTextBlock->addWord(formattedNoteref, fontStyle);
-      }
+      self->currentNoterefTextLen = 0;
+      self->currentNoterefText[0] = '\0';
+      self->currentNoterefHrefLen = 0;
+      // Note: We do NOT clear currentNoterefHref here yet, we do it below
     }
 
-    self->currentNoterefTextLen = 0;
-    self->currentNoterefText[0] = '\0';
-    self->currentNoterefHrefLen = 0;
-    self->currentNoterefHref[0] = '\0';
-    self->depth -= 1;
-    return;
+    // [NEW] Reset Anchor Depth
+    // This runs for BOTH footnotes and regular links to ensure state is clean
+    if (self->anchorDepth == self->depth) {
+      self->anchorDepth = -1;
+      self->currentNoterefHref[0] = '\0';
+    }
+
+    // If it was a noteref, we are done with this tag, return early
+    if (wasNoteref) {
+      self->depth -= 1;
+      return;
+    }
   }
 
 
@@ -817,6 +879,9 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   insideAsideFootnote = false;
   currentPageFootnoteCount = 0;
   isPass1CollectingAsides = false;
+
+  supDepth = -1;
+  anchorDepth = -1;
 
   startNewTextBlock((TextBlock::Style)this->paragraphAlignment);
 

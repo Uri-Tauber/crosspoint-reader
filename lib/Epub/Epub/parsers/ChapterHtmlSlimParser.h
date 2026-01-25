@@ -102,6 +102,10 @@ class ChapterHtmlSlimParser {
   // Flag to indicate we're in Pass 1 (collecting asides only)
   bool isPass1CollectingAsides = false;
 
+  // Track superscript depth
+  int supDepth = -1;
+  int anchorDepth = -1;
+
   void addFootnoteToCurrentPage(const char* number, const char* href);
   void startNewTextBlock(TextBlock::Style style);
   void makePages();
