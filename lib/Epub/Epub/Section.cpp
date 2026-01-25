@@ -1,6 +1,6 @@
 #include "Section.h"
 
-#include <SD.h>
+#include <SDCardManager.h>
 #include <Serialization.h>
 
 #include <fstream>
@@ -8,14 +8,18 @@
 
 #include "FsHelpers.h"
 #include "Page.h"
+#include "hyphenation/Hyphenator.h"
 #include "parsers/ChapterHtmlSlimParser.h"
 
 namespace {
-constexpr uint8_t SECTION_FILE_VERSION = 5;
-}
+constexpr uint8_t SECTION_FILE_VERSION = 10;
+constexpr uint32_t HEADER_SIZE = sizeof(uint8_t) + sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(uint8_t) +
+                                 sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(bool) +
+                                 sizeof(uint32_t);
+}  // namespace
 
 // Helper function to write XML-escaped text directly to file
-static bool writeEscapedXml(File& file, const char* text) {
+static bool writeEscapedXml(FsFile& file, const char* text) {
   if (!text) return true;
 
   // Use a static buffer to avoid heap allocation
@@ -53,7 +57,6 @@ static bool writeEscapedXml(File& file, const char* text) {
       }
     } else {
       // Keep everything else (include UTF8)
-      // This preserves accented characters like é, è, à, etc.
       buffer[bufferPos++] = (char)c;
     }
 
@@ -69,98 +72,106 @@ static bool writeEscapedXml(File& file, const char* text) {
   return written == bufferPos;
 }
 
-void Section::onPageComplete(std::unique_ptr<Page> page) {
-  const auto filePath = cachePath + "/page_" + std::to_string(pageCount) + ".bin";
+uint32_t Section::onPageComplete(std::unique_ptr<Page> page) {
+  if (!file) {
+    Serial.printf("[%lu] [SCT] File not open for writing page %d\n", millis(), pageCount);
+    return 0;
+  }
 
-  std::ofstream outputFile("/sd" + filePath);
-  page->serialize(outputFile);
-  outputFile.close();
-
-  Serial.printf("[%lu] [SCT] Page %d processed\n", millis(), pageCount);
+  const uint32_t position = file.position();
+  if (!page->serialize(file)) {
+    Serial.printf("[%lu] [SCT] Failed to serialize page %d\n", millis(), pageCount);
+    return 0;
+  }
+  // Debug reduce log spam
+  // Serial.printf("[%lu] [SCT] Page %d processed\n", millis(), pageCount);
 
   pageCount++;
+  return position;
 }
 
-void Section::writeCacheMetadata(const int fontId, const float lineCompression, const int marginTop,
-                                 const int marginRight, const int marginBottom, const int marginLeft,
-                                 const bool extraParagraphSpacing) const {
-  std::ofstream outputFile(("/sd" + cachePath + "/section.bin").c_str());
-  serialization::writePod(outputFile, SECTION_FILE_VERSION);
-  serialization::writePod(outputFile, fontId);
-  serialization::writePod(outputFile, lineCompression);
-  serialization::writePod(outputFile, marginTop);
-  serialization::writePod(outputFile, marginRight);
-  serialization::writePod(outputFile, marginBottom);
-  serialization::writePod(outputFile, marginLeft);
-  serialization::writePod(outputFile, extraParagraphSpacing);
-  serialization::writePod(outputFile, pageCount);
-  outputFile.close();
+void Section::writeSectionFileHeader(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
+                                     const uint8_t paragraphAlignment, const uint16_t viewportWidth,
+                                     const uint16_t viewportHeight, const bool hyphenationEnabled) {
+  if (!file) {
+    Serial.printf("[%lu] [SCT] File not open for writing header\n", millis());
+    return;
+  }
+  static_assert(HEADER_SIZE == sizeof(SECTION_FILE_VERSION) + sizeof(fontId) + sizeof(lineCompression) +
+                                   sizeof(extraParagraphSpacing) + sizeof(paragraphAlignment) + sizeof(viewportWidth) +
+                                   sizeof(viewportHeight) + sizeof(pageCount) + sizeof(hyphenationEnabled) +
+                                   sizeof(uint32_t),
+                "Header size mismatch");
+  serialization::writePod(file, SECTION_FILE_VERSION);
+  serialization::writePod(file, fontId);
+  serialization::writePod(file, lineCompression);
+  serialization::writePod(file, extraParagraphSpacing);
+  serialization::writePod(file, paragraphAlignment);
+  serialization::writePod(file, viewportWidth);
+  serialization::writePod(file, viewportHeight);
+  serialization::writePod(file, hyphenationEnabled);
+  serialization::writePod(file, pageCount);  // Placeholder for page count (will be initially 0 when written)
+  serialization::writePod(file, static_cast<uint32_t>(0));  // Placeholder for LUT offset
 }
 
-bool Section::loadCacheMetadata(const int fontId, const float lineCompression, const int marginTop,
-                                const int marginRight, const int marginBottom, const int marginLeft,
-                                const bool extraParagraphSpacing) {
-  if (!SD.exists(cachePath.c_str())) {
+bool Section::loadSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
+                              const uint8_t paragraphAlignment, const uint16_t viewportWidth,
+                              const uint16_t viewportHeight, const bool hyphenationEnabled) {
+  if (!SdMan.openFileForRead("SCT", filePath, file)) {
     return false;
   }
-
-  const auto sectionFilePath = cachePath + "/section.bin";
-  if (!SD.exists(sectionFilePath.c_str())) {
-    return false;
-  }
-
-  std::ifstream inputFile(("/sd" + sectionFilePath).c_str());
 
   // Match parameters
   {
     uint8_t version;
-    serialization::readPod(inputFile, version);
+    serialization::readPod(file, version);
     if (version != SECTION_FILE_VERSION) {
-      inputFile.close();
+      file.close();
       Serial.printf("[%lu] [SCT] Deserialization failed: Unknown version %u\n", millis(), version);
       clearCache();
       return false;
     }
 
-    int fileFontId, fileMarginTop, fileMarginRight, fileMarginBottom, fileMarginLeft;
+    int fileFontId;
+    uint16_t fileViewportWidth, fileViewportHeight;
     float fileLineCompression;
     bool fileExtraParagraphSpacing;
-    serialization::readPod(inputFile, fileFontId);
-    serialization::readPod(inputFile, fileLineCompression);
-    serialization::readPod(inputFile, fileMarginTop);
-    serialization::readPod(inputFile, fileMarginRight);
-    serialization::readPod(inputFile, fileMarginBottom);
-    serialization::readPod(inputFile, fileMarginLeft);
-    serialization::readPod(inputFile, fileExtraParagraphSpacing);
+    uint8_t fileParagraphAlignment;
+    bool fileHyphenationEnabled;
+    serialization::readPod(file, fileFontId);
+    serialization::readPod(file, fileLineCompression);
+    serialization::readPod(file, fileExtraParagraphSpacing);
+    serialization::readPod(file, fileParagraphAlignment);
+    serialization::readPod(file, fileViewportWidth);
+    serialization::readPod(file, fileViewportHeight);
+    serialization::readPod(file, fileHyphenationEnabled);
 
-    if (fontId != fileFontId || lineCompression != fileLineCompression || marginTop != fileMarginTop ||
-        marginRight != fileMarginRight || marginBottom != fileMarginBottom || marginLeft != fileMarginLeft ||
-        extraParagraphSpacing != fileExtraParagraphSpacing) {
-      inputFile.close();
+    if (fontId != fileFontId || lineCompression != fileLineCompression ||
+        extraParagraphSpacing != fileExtraParagraphSpacing || paragraphAlignment != fileParagraphAlignment ||
+        viewportWidth != fileViewportWidth || viewportHeight != fileViewportHeight ||
+        hyphenationEnabled != fileHyphenationEnabled) {
+      file.close();
       Serial.printf("[%lu] [SCT] Deserialization failed: Parameters do not match\n", millis());
       clearCache();
       return false;
     }
   }
 
-  serialization::readPod(inputFile, pageCount);
-  inputFile.close();
+  serialization::readPod(file, pageCount);
+  file.close();
   Serial.printf("[%lu] [SCT] Deserialization succeeded: %d pages\n", millis(), pageCount);
   return true;
 }
 
-void Section::setupCacheDir() const {
-  epub->setupCacheDir();
-  SD.mkdir(cachePath.c_str());
-}
+
 
 bool Section::clearCache() const {
-  if (!SD.exists(cachePath.c_str())) {
+  if (!SdMan.exists(filePath.c_str())) {
     Serial.printf("[%lu] [SCT] Cache does not exist, no action needed\n", millis());
     return true;
   }
 
-  if (!FsHelpers::removeDir(cachePath.c_str())) {
+  if (!SdMan.remove(filePath.c_str())) {
     Serial.printf("[%lu] [SCT] Failed to clear cache\n", millis());
     return false;
   }
@@ -169,60 +180,84 @@ bool Section::clearCache() const {
   return true;
 }
 
-bool Section::persistPageDataToSD(const int fontId, const float lineCompression, const int marginTop,
-                                  const int marginRight, const int marginBottom, const int marginLeft,
-                                  const bool extraParagraphSpacing) {
-  const auto localPath = epub->getSpineItem(spineIndex);
+bool Section::createSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
+                                const uint8_t paragraphAlignment, const uint16_t viewportWidth,
+                                const uint16_t viewportHeight, const bool hyphenationEnabled,
+                                const std::function<void()>& progressSetupFn,
+                                const std::function<void(int)>& progressFn) {
+  constexpr uint32_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
 
-  // Check if it's a virtual spine item
-  if (epub->isVirtualSpineItem(spineIndex)) {
-    Serial.printf("[%lu] [SCT] Processing virtual spine item: %s\n", millis(), localPath.c_str());
+  BookMetadataCache::SpineEntry spineEntry = epub->getSpineItem(spineIndex);
+  const std::string localPath = spineEntry.href;
+  const auto tmpHtmlPath = epub->getCachePath() + "/.tmp_" + std::to_string(spineIndex) + ".html";
 
-    const auto sdPath = "/sd" + localPath;
+  // Create cache directory if it doesn't exist
+  {
+    const auto sectionsDir = epub->getCachePath() + "/sections";
+    SdMan.mkdir(sectionsDir.c_str());
+  }
 
-    ChapterHtmlSlimParser visitor(
-        sdPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft,
-        extraParagraphSpacing, [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); },
-        cachePath);
+  bool isVirtual = epub->isVirtualSpineItem(spineIndex);
+  bool success = false;
+  uint32_t fileSize = 0;
+  std::string fileToParse = tmpHtmlPath;
 
-    bool success = visitor.parseAndBuildPages();
+  if (isVirtual) {
+      Serial.printf("[%lu] [SCT] Processing virtual spine item: %s\n", millis(), localPath.c_str());
+      // For virtual items, the path is already on SD, e.g. /sd/cache/...
+      // But we need to make sure the parser can read it.
+      // If it starts with /sd/, we might need to strip it if using SdFat with root?
+      // Assuming absolute path is fine.
+      fileToParse = localPath;
+      success = true;
+      fileSize = 0; // Don't check size for progress bar on virtual items
+  } else {
+    // Normal file - stream from zip
+    for (int attempt = 0; attempt < 3 && !success; attempt++) {
+        if (attempt > 0) delay(50);
 
-    if (!success) {
-      Serial.printf("[%lu] [SCT] Failed to parse virtual file\n", millis());
-      return false;
+        if (SdMan.exists(tmpHtmlPath.c_str())) SdMan.remove(tmpHtmlPath.c_str());
+
+        FsFile tmpHtml;
+        if (!SdMan.openFileForWrite("SCT", tmpHtmlPath, tmpHtml)) continue;
+        success = epub->readItemContentsToStream(localPath, tmpHtml, 1024);
+        fileSize = tmpHtml.size();
+        tmpHtml.close();
+
+        if (!success && SdMan.exists(tmpHtmlPath.c_str())) SdMan.remove(tmpHtmlPath.c_str());
     }
 
-    writeCacheMetadata(fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft,
-                       extraParagraphSpacing);
-    return true;
+    if (!success) {
+        Serial.printf("[%lu] [SCT] Failed to stream item contents\n", millis());
+        return false;
+    }
   }
 
-  // Normal file
-  const auto tmpHtmlPath = epub->getCachePath() + "/.tmp_" + std::to_string(spineIndex) + ".html";
-  File f = SD.open(tmpHtmlPath.c_str(), FILE_WRITE, true);
-  bool success = epub->readItemContentsToStream(localPath, f, 1024);
-  f.close();
+  // Only show progress bar for larger chapters
+  if (progressSetupFn && fileSize >= MIN_SIZE_FOR_PROGRESS) {
+    progressSetupFn();
+  }
 
-  if (!success) {
-    Serial.printf("[%lu] [SCT] Failed to stream item contents to temp file\n", millis());
+  if (!SdMan.openFileForWrite("SCT", filePath, file)) {
     return false;
   }
-
-  Serial.printf("[%lu] [SCT] Streamed temp HTML to %s\n", millis(), tmpHtmlPath.c_str());
-
-  const auto sdTmpHtmlPath = "/sd" + tmpHtmlPath;
+  writeSectionFileHeader(fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
+                         viewportHeight, hyphenationEnabled);
+  std::vector<uint32_t> lut = {};
 
   ChapterHtmlSlimParser visitor(
-      sdTmpHtmlPath.c_str(), renderer, fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft,
-      extraParagraphSpacing, [this](std::unique_ptr<Page> page) { this->onPageComplete(std::move(page)); }, cachePath);
+      fileToParse, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
+      viewportHeight, hyphenationEnabled,
+      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
+      progressFn);
+  
+  Hyphenator::setPreferredLanguage(epub->getLanguage());
 
   // Track which inline footnotes AND paragraph notes are actually referenced in this file
   std::set<std::string> rewrittenInlineIds;
   int noterefCount = 0;
 
   visitor.setNoterefCallback([this, &noterefCount, &rewrittenInlineIds](Noteref& noteref) {
-    Serial.printf("[%lu] [SCT] Callback noteref: %s -> %s\n", millis(), noteref.number, noteref.href);
-
     // Extract the ID from the href for tracking
     std::string href(noteref.href);
 
@@ -234,171 +269,135 @@ bool Section::persistPageDataToSD(const int fontId, const float lineCompression,
       if (underscorePos != std::string::npos && dotPos != std::string::npos) {
         std::string noteId = href.substr(underscorePos + 1, dotPos - underscorePos - 1);
         rewrittenInlineIds.insert(noteId);
-        Serial.printf("[%lu] [SCT] Marked note as rewritten: %s\n", millis(), noteId.c_str());
       }
     } else {
       // Normal external footnote
       epub->markAsFootnotePage(noteref.href);
     }
-
     noterefCount++;
   });
 
-  // Parse and build pages (inline hrefs are rewritten automatically inside parser)
   success = visitor.parseAndBuildPages();
 
-  SD.remove(tmpHtmlPath.c_str());
+  if (!isVirtual) {
+    SdMan.remove(tmpHtmlPath.c_str());
+  }
 
   if (!success) {
     Serial.printf("[%lu] [SCT] Failed to parse XML and build pages\n", millis());
+    file.close();
+    SdMan.remove(filePath.c_str());
     return false;
   }
 
-  // NOW generate inline footnote HTML files ONLY for rewritten ones
-  Serial.printf("[%lu] [SCT] Found %d inline footnotes, %d were referenced\n", millis(), visitor.inlineFootnoteCount,
-                rewrittenInlineIds.size());
-
+  // --- Footnote Generation Logic (Merged from HEAD) ---
+  
+  // Inline footnotes
   for (int i = 0; i < visitor.inlineFootnoteCount; i++) {
     const char* inlineId = visitor.inlineFootnotes[i].id;
     const char* inlineText = visitor.inlineFootnotes[i].text;
 
-    // Only generate if this inline footnote was actually referenced
-    if (rewrittenInlineIds.find(std::string(inlineId)) == rewrittenInlineIds.end()) {
-      Serial.printf("[%lu] [SCT] Skipping unreferenced inline footnote: %s\n", millis(), inlineId);
-      continue;
-    }
-
-    // Verify that the text exists
-    if (!inlineText || strlen(inlineText) == 0) {
-      Serial.printf("[%lu] [SCT] Skipping empty inline footnote: %s\n", millis(), inlineId);
-      continue;
-    }
-
-    Serial.printf("[%lu] [SCT] Processing inline footnote: %s (len=%d)\n", millis(), inlineId, strlen(inlineText));
+    if (rewrittenInlineIds.find(std::string(inlineId)) == rewrittenInlineIds.end()) continue;
+    if (!inlineText || strlen(inlineText) == 0) continue;
 
     char inlineFilename[64];
     snprintf(inlineFilename, sizeof(inlineFilename), "inline_%s.html", inlineId);
-
-    // Store in main cache dir, not section cache dir
     std::string fullPath = epub->getCachePath() + "/" + std::string(inlineFilename);
 
-    Serial.printf("[%lu] [SCT] Generating inline file: %s\n", millis(), fullPath.c_str());
-
-    File file = SD.open(fullPath.c_str(), FILE_WRITE, true);
-    if (file) {
-      // valid XML declaration and encoding
+    FsFile file;
+    if (SdMan.openFileForWrite("SCT", fullPath, file)) {
       file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
       file.println("<!DOCTYPE html>");
       file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
-      file.println("<head>");
-      file.println("<meta charset=\"UTF-8\"/>");
-      file.println("<title>Footnote</title>");
-      file.println("</head>");
+      file.println("<head><meta charset=\"UTF-8\"/><title>Footnote</title></head>");
       file.println("<body>");
-
-      // Paragraph with content
       file.print("<p id=\"");
       file.print(inlineId);
       file.print("\">");
-
-      if (!writeEscapedXml(file, inlineText)) {
-        Serial.printf("[%lu] [SCT] Warning: writeEscapedXml may have failed\n", millis());
-      }
-
-      file.println("</p>");
-      file.println("</body>");
-      file.println("</html>");
+      writeEscapedXml(file, inlineText);
+      file.println("</p></body></html>");
       file.close();
 
-      Serial.printf("[%lu] [SCT] Generated inline footnote file\n", millis());
-
       int virtualIndex = epub->addVirtualSpineItem(fullPath);
-      Serial.printf("[%lu] [SCT] Added virtual spine item at index %d\n", millis(), virtualIndex);
-
-      // Mark as footnote page
       char newHref[128];
       snprintf(newHref, sizeof(newHref), "%s#%s", inlineFilename, inlineId);
       epub->markAsFootnotePage(newHref);
-    } else {
-      Serial.printf("[%lu] [SCT] Failed to create inline file\n", millis());
     }
   }
 
-  // Generate paragraph note HTML files
-  Serial.printf("[%lu] [SCT] Found %d paragraph notes\n", millis(), visitor.paragraphNoteCount);
-
+  // Paragraph notes
   for (int i = 0; i < visitor.paragraphNoteCount; i++) {
     const char* pnoteId = visitor.paragraphNotes[i].id;
     const char* pnoteText = visitor.paragraphNotes[i].text;
 
-    if (!pnoteText || strlen(pnoteText) == 0) {
-      continue;
-    }
+    if (!pnoteText || strlen(pnoteText) == 0) continue;
+    if (rewrittenInlineIds.find(std::string(pnoteId)) == rewrittenInlineIds.end()) continue;
 
-    // Check if this paragraph note was referenced
-    if (rewrittenInlineIds.find(std::string(pnoteId)) == rewrittenInlineIds.end()) {
-      Serial.printf("[%lu] [SCT] Skipping unreferenced paragraph note: %s\n", millis(), pnoteId);
-      continue;
-    }
-
-    // Create filename: pnote_rnote1.html
     char pnoteFilename[64];
     snprintf(pnoteFilename, sizeof(pnoteFilename), "pnote_%s.html", pnoteId);
-
     std::string fullPath = epub->getCachePath() + "/" + std::string(pnoteFilename);
 
-    Serial.printf("[%lu] [SCT] Generating paragraph note file: %s\n", millis(), fullPath.c_str());
-
-    File file = SD.open(fullPath.c_str(), FILE_WRITE, true);
-    if (file) {
+    FsFile file;
+    if (SdMan.openFileForWrite("SCT", fullPath, file)) {
       file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
       file.println("<!DOCTYPE html>");
       file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
-      file.println("<head>");
-      file.println("<meta charset=\"UTF-8\"/>");
-      file.println("<title>Note</title>");
-      file.println("</head>");
+      file.println("<head><meta charset=\"UTF-8\"/><title>Note</title></head>");
       file.println("<body>");
       file.print("<p id=\"");
       file.print(pnoteId);
       file.print("\">");
-
-      if (!writeEscapedXml(file, pnoteText)) {
-        Serial.printf("[%lu] [SCT] Warning: writeEscapedXml may have failed\n", millis());
-      }
-
-      file.println("</p>");
-      file.println("</body>");
-      file.println("</html>");
+      writeEscapedXml(file, pnoteText);
+      file.println("</p></body></html>");
       file.close();
 
-      Serial.printf("[%lu] [SCT] Generated paragraph note file\n", millis());
-
       int virtualIndex = epub->addVirtualSpineItem(fullPath);
-      Serial.printf("[%lu] [SCT] Added virtual spine item at index %d\n", millis(), virtualIndex);
-
       char newHref[128];
       snprintf(newHref, sizeof(newHref), "%s#%s", pnoteFilename, pnoteId);
       epub->markAsFootnotePage(newHref);
     }
   }
 
-  Serial.printf("[%lu] [SCT] Total noterefs found: %d\n", millis(), noterefCount);
+  // Write LUT (master)
+  const uint32_t lutOffset = file.position();
+  bool hasFailedLutRecords = false;
+  for (const uint32_t& pos : lut) {
+    if (pos == 0) {
+      hasFailedLutRecords = true;
+      break;
+    }
+    serialization::writePod(file, pos);
+  }
 
-  writeCacheMetadata(fontId, lineCompression, marginTop, marginRight, marginBottom, marginLeft, extraParagraphSpacing);
+  if (hasFailedLutRecords) {
+    Serial.printf("[%lu] [SCT] Failed to write LUT due to invalid page positions\n", millis());
+    file.close();
+    SdMan.remove(filePath.c_str());
+    return false;
+  }
 
+  // Go back and write LUT offset
+  file.seek(HEADER_SIZE - sizeof(uint32_t) - sizeof(pageCount));
+  serialization::writePod(file, pageCount);
+  serialization::writePod(file, lutOffset);
+  file.close();
   return true;
 }
 
-std::unique_ptr<Page> Section::loadPageFromSD() const {
-  const auto filePath = "/sd" + cachePath + "/page_" + std::to_string(currentPage) + ".bin";
-  if (!SD.exists(filePath.c_str() + 3)) {
-    Serial.printf("[%lu] [SCT] Page file does not exist: %s\n", millis(), filePath.c_str());
+std::unique_ptr<Page> Section::loadPageFromSectionFile() {
+  if (!SdMan.openFileForRead("SCT", filePath, file)) {
     return nullptr;
   }
 
-  std::ifstream inputFile(filePath);
-  auto page = Page::deserialize(inputFile);
-  inputFile.close();
+  file.seek(HEADER_SIZE - sizeof(uint32_t));
+  uint32_t lutOffset;
+  serialization::readPod(file, lutOffset);
+  file.seek(lutOffset + sizeof(uint32_t) * currentPage);
+  uint32_t pagePos;
+  serialization::readPod(file, pagePos);
+  file.seek(pagePos);
+
+  auto page = Page::deserialize(file);
+  file.close();
   return page;
 }

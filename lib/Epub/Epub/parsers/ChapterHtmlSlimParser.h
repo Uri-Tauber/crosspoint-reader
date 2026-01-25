@@ -48,9 +48,10 @@ struct ParagraphNote {
 };
 
 class ChapterHtmlSlimParser {
-  const char* filepath;
+  const std::string& filepath;
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
+  std::function<void(int)> progressFn;  // Progress callback (0-100)
   int depth = 0;
   int skipUntilDepth = INT_MAX;
   int boldUntilDepth = INT_MAX;
@@ -62,11 +63,11 @@ class ChapterHtmlSlimParser {
   int16_t currentPageNextY = 0;
   int fontId;
   float lineCompression;
-  int marginTop;
-  int marginRight;
-  int marginBottom;
-  int marginLeft;
   bool extraParagraphSpacing;
+  uint8_t paragraphAlignment;
+  uint16_t viewportWidth;
+  uint16_t viewportHeight;
+  bool hyphenationEnabled;
 
   // Noteref tracking
   bool insideNoteref = false;
@@ -101,11 +102,8 @@ class ChapterHtmlSlimParser {
   // Flag to indicate we're in Pass 1 (collecting asides only)
   bool isPass1CollectingAsides = false;
 
-  // Cache dir path for generating HTML files
-  std::string cacheDir;
-
   void addFootnoteToCurrentPage(const char* number, const char* href);
-  void startNewTextBlock(TextBlock::BLOCK_STYLE style);
+  void startNewTextBlock(TextBlock::Style style);
   void makePages();
 
   // XML callbacks
@@ -121,22 +119,23 @@ class ChapterHtmlSlimParser {
   ParagraphNote paragraphNotes[32];
   int paragraphNoteCount = 0;
 
-  explicit ChapterHtmlSlimParser(const char* filepath, GfxRenderer& renderer, const int fontId,
-                                 const float lineCompression, const int marginTop, const int marginRight,
-                                 const int marginBottom, const int marginLeft, const bool extraParagraphSpacing,
+  explicit ChapterHtmlSlimParser(const std::string& filepath, GfxRenderer& renderer, const int fontId,
+                                 const float lineCompression, const bool extraParagraphSpacing,
+                                 const uint8_t paragraphAlignment, const uint16_t viewportWidth,
+                                 const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::string& cacheDir = "")
+                                 const std::function<void(int)>& progressFn = nullptr)
       : filepath(filepath),
         renderer(renderer),
         completePageFn(completePageFn),
         fontId(fontId),
         lineCompression(lineCompression),
-        marginTop(marginTop),
-        marginRight(marginRight),
-        marginBottom(marginBottom),
-        marginLeft(marginLeft),
         extraParagraphSpacing(extraParagraphSpacing),
-        cacheDir(cacheDir),
+        paragraphAlignment(paragraphAlignment),
+        viewportWidth(viewportWidth),
+        viewportHeight(viewportHeight),
+        hyphenationEnabled(hyphenationEnabled),
+        progressFn(progressFn),
         inlineFootnoteCount(0) {
     // Initialize all footnote pointers to null
     for (int i = 0; i < 16; i++) {

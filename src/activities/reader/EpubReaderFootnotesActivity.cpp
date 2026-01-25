@@ -1,8 +1,10 @@
 #include "EpubReaderFootnotesActivity.h"
 
 #include <GfxRenderer.h>
+#include <EpdFontFamily.h>
 
-#include "config.h"
+#include "fontIds.h"
+#include "MappedInputManager.h"
 
 void EpubReaderFootnotesActivity::onEnter() {
   selectedIndex = 0;
@@ -14,12 +16,12 @@ void EpubReaderFootnotesActivity::onExit() {
 }
 
 void EpubReaderFootnotesActivity::loop() {
-  if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
     onGoBack();
     return;
   }
 
-  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
     const FootnoteEntry* entry = footnotes.getEntry(selectedIndex);
     if (entry) {
       Serial.printf("[%lu] [FNS] Selected footnote: %s -> %s\n", millis(), entry->number, entry->href);
@@ -30,14 +32,14 @@ void EpubReaderFootnotesActivity::loop() {
 
   bool needsRedraw = false;
 
-  if (inputManager.wasPressed(InputManager::BTN_UP)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
     if (selectedIndex > 0) {
       selectedIndex--;
       needsRedraw = true;
     }
   }
 
-  if (inputManager.wasPressed(InputManager::BTN_DOWN)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
     if (selectedIndex < footnotes.getCount() - 1) {
       selectedIndex++;
       needsRedraw = true;
@@ -57,7 +59,7 @@ void EpubReaderFootnotesActivity::render() {
   constexpr int marginLeft = 20;
 
   // Title
-  renderer.drawText(READER_FONT_ID, marginLeft, 20, "Footnotes", BOLD);
+  renderer.drawText(UI_12_FONT_ID, marginLeft, 20, "Footnotes", EpdFontFamily::BOLD);
 
   if (footnotes.getCount() == 0) {
     renderer.drawText(SMALL_FONT_ID, marginLeft, startY + 20, "No footnotes on this page");
@@ -74,15 +76,15 @@ void EpubReaderFootnotesActivity::render() {
 
     // Draw selection indicator (arrow)
     if (i == selectedIndex) {
-      renderer.drawText(READER_FONT_ID, marginLeft - 10, y, ">", BOLD);
-      renderer.drawText(READER_FONT_ID, marginLeft + 10, y, entry->number, BOLD);
+      renderer.drawText(UI_12_FONT_ID, marginLeft - 10, y, ">", EpdFontFamily::BOLD);
+      renderer.drawText(UI_12_FONT_ID, marginLeft + 10, y, entry->number, EpdFontFamily::BOLD);
     } else {
-      renderer.drawText(READER_FONT_ID, marginLeft + 10, y, entry->number);
+      renderer.drawText(UI_12_FONT_ID, marginLeft + 10, y, entry->number);
     }
   }
 
   // Instructions at bottom
-  renderer.drawText(SMALL_FONT_ID, marginLeft, GfxRenderer::getScreenHeight() - 40,
+  renderer.drawText(SMALL_FONT_ID, marginLeft, renderer.getScreenHeight() - 40,
                     "UP/DOWN: Select  CONFIRM: Go to footnote  BACK: Return");
 
   renderer.displayBuffer();

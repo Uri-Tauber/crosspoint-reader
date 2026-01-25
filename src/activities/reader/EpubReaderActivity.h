@@ -5,22 +5,22 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
-#include "../Activity.h"
+#include "activities/ActivityWithSubactivity.h"
 #include "EpubReaderFootnotesActivity.h"
 
-class EpubReaderActivity final : public Activity {
+class EpubReaderActivity final : public ActivityWithSubactivity {
   std::shared_ptr<Epub> epub;
   std::unique_ptr<Section> section = nullptr;
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
-  std::unique_ptr<Activity> subAcitivity = nullptr;
   int currentSpineIndex = 0;
   int nextPageNumber = 0;
   int pagesUntilFullRefresh = 0;
   bool updateRequired = false;
   const std::function<void()> onGoBack;
-  FootnotesData currentPageFootnotes;
+  const std::function<void()> onGoHome;
 
+  FootnotesData currentPageFootnotes;
   int savedSpineIndex = -1;
   int savedPageNumber = -1;
   bool isViewingFootnote = false;
@@ -28,17 +28,21 @@ class EpubReaderActivity final : public Activity {
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void renderScreen();
-  void renderContents(std::unique_ptr<Page> p);
-  void renderStatusBar() const;
+  void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
+                      int orientedMarginBottom, int orientedMarginLeft);
+  void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
 
   // Footnote navigation methods
   void navigateToHref(const char* href, bool savePosition = false);
   void restoreSavedPosition();
 
  public:
-  explicit EpubReaderActivity(GfxRenderer& renderer, InputManager& inputManager, std::unique_ptr<Epub> epub,
-                              const std::function<void()>& onGoBack)
-      : Activity(renderer, inputManager), epub(std::move(epub)), onGoBack(onGoBack) {}
+  explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Epub> epub,
+                              const std::function<void()>& onGoBack, const std::function<void()>& onGoHome)
+      : ActivityWithSubactivity("EpubReader", renderer, mappedInput),
+        epub(std::move(epub)),
+        onGoBack(onGoBack),
+        onGoHome(onGoHome) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

@@ -22,10 +22,10 @@ class EpubReaderMenuActivity final : public Activity {
   void renderScreen();
 
  public:
-  explicit EpubReaderMenuActivity(GfxRenderer& renderer, InputManager& inputManager,
+  explicit EpubReaderMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                   const std::function<void()>& onGoBack,
                                   const std::function<void(MenuOption option)>& onSelectOption)
-      : Activity(renderer, inputManager), onGoBack(onGoBack), onSelectOption(onSelectOption) {}
+      : Activity("EpubReaderMenu", renderer, mappedInput), onGoBack(onGoBack), onSelectOption(onSelectOption) {}
 
   void onEnter() override;
   void onExit() override;

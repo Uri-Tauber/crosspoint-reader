@@ -1,35 +1,38 @@
 #pragma once
+
 #include <Print.h>
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "Epub/EpubTocEntry.h"
+#include "Epub/BookMetadataCache.h"
 
 class ZipFile;
 
 class Epub {
-  std::string title;
-  std::string coverImageItem;
+  // the ncx file (EPUB 2)
   std::string tocNcxItem;
+  // the nav file (EPUB 3)
+  std::string tocNavItem;
+  // where is the EPUBfile?
   std::string filepath;
-  std::vector<std::pair<std::string, std::string>> spine;
-  // the file size of the spine items (proxy to book progress)
-  std::vector<size_t> cumulativeSpineItemSize;
-  // the toc of the EPUB file
-  std::vector<EpubTocEntry> toc;
+  // the base path for items in the EPUB file
   std::string contentBasePath;
   std::string cachePath;
+  // Spine and TOC cache
+  std::unique_ptr<BookMetadataCache> bookMetadataCache;
 
   // Use pointers, allocate only if needed
   std::unordered_set<std::string>* footnotePages;
   std::vector<std::string>* virtualSpineItems;
 
   bool findContentOpfFile(std::string* contentOpfFile) const;
-  bool parseContentOpf(const std::string& contentOpfFilePath);
-  bool parseTocNcxFile();
+  bool parseContentOpf(BookMetadataCache::BookMetadata& bookMetadata);
+  bool parseTocNcxFile() const;
+  bool parseTocNavFile() const;
 
  public:
   explicit Epub(std::string filepath, const std::string& cacheDir)
@@ -43,24 +46,30 @@ class Epub {
   }
 
   std::string& getBasePath() { return contentBasePath; }
-  bool load();
+  bool load(bool buildIfMissing = true);
   bool clearCache() const;
   void setupCacheDir() const;
   const std::string& getCachePath() const;
   const std::string& getPath() const;
   const std::string& getTitle() const;
-  const std::string& getCoverImageItem() const;
+  const std::string& getAuthor() const;
+  const std::string& getLanguage() const;
+  std::string getCoverBmpPath(bool cropped = false) const;
+  bool generateCoverBmp(bool cropped = false) const;
+  std::string getThumbBmpPath() const;
+  bool generateThumbBmp() const;
   uint8_t* readItemContentsToBytes(const std::string& itemHref, size_t* size = nullptr,
                                    bool trailingNullByte = false) const;
   bool readItemContentsToStream(const std::string& itemHref, Print& out, size_t chunkSize) const;
   bool getItemSize(const std::string& itemHref, size_t* size) const;
-  std::string getSpineItem(int index) const;
+  BookMetadataCache::SpineEntry getSpineItem(int spineIndex) const;
+  BookMetadataCache::TocEntry getTocItem(int tocIndex) const;
   int getSpineItemsCount() const;
-  size_t getCumulativeSpineItemSize(const int spineIndex) const;
-  EpubTocEntry& getTocItem(int tocIndex);
   int getTocItemsCount() const;
   int getSpineIndexForTocIndex(int tocIndex) const;
   int getTocIndexForSpineIndex(int spineIndex) const;
+  size_t getCumulativeSpineItemSize(int spineIndex) const;
+  int getSpineIndexForTextReference() const;
 
   void markAsFootnotePage(const std::string& href);
   bool isFootnotePage(const std::string& filename) const;
@@ -70,5 +79,5 @@ class Epub {
   int findVirtualSpineIndex(const std::string& filename) const;
 
   size_t getBookSize() const;
-  uint8_t calculateProgress(const int currentSpineIndex, const float currentSpineRead);
+  float calculateProgress(int currentSpineIndex, float currentSpineRead) const;
 };

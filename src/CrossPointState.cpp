@@ -1,38 +1,49 @@
 #include "CrossPointState.h"
 
 #include <HardwareSerial.h>
-#include <SD.h>
+#include <SDCardManager.h>
 #include <Serialization.h>
 
-#include <fstream>
-
 namespace {
-constexpr uint8_t STATE_FILE_VERSION = 1;
-constexpr char STATE_FILE[] = "/sd/.crosspoint/state.bin";
+constexpr uint8_t STATE_FILE_VERSION = 2;
+constexpr char STATE_FILE[] = "/.crosspoint/state.bin";
 }  // namespace
 
 CrossPointState CrossPointState::instance;
 
 bool CrossPointState::saveToFile() const {
-  std::ofstream outputFile(STATE_FILE);
+  FsFile outputFile;
+  if (!SdMan.openFileForWrite("CPS", STATE_FILE, outputFile)) {
+    return false;
+  }
+
   serialization::writePod(outputFile, STATE_FILE_VERSION);
   serialization::writeString(outputFile, openEpubPath);
+  serialization::writePod(outputFile, lastSleepImage);
   outputFile.close();
   return true;
 }
 
 bool CrossPointState::loadFromFile() {
-  std::ifstream inputFile(STATE_FILE);
+  FsFile inputFile;
+  if (!SdMan.openFileForRead("CPS", STATE_FILE, inputFile)) {
+    return false;
+  }
 
   uint8_t version;
   serialization::readPod(inputFile, version);
-  if (version != STATE_FILE_VERSION) {
+  if (version > STATE_FILE_VERSION) {
     Serial.printf("[%lu] [CPS] Deserialization failed: Unknown version %u\n", millis(), version);
     inputFile.close();
     return false;
   }
 
   serialization::readString(inputFile, openEpubPath);
+  if (version >= 2) {
+    serialization::readPod(inputFile, lastSleepImage);
+  } else {
+    lastSleepImage = 0;
+  }
 
   inputFile.close();
   return true;

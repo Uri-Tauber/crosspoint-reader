@@ -54,10 +54,10 @@ class EpubReaderFootnotesActivity final : public Activity {
   int selectedIndex;
 
  public:
-  EpubReaderFootnotesActivity(GfxRenderer& renderer, InputManager& inputManager, const FootnotesData& footnotes,
+  EpubReaderFootnotesActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, const FootnotesData& footnotes,
                               const std::function<void()>& onGoBack,
                               const std::function<void(const char*)>& onSelectFootnote)
-      : Activity(renderer, inputManager),
+      : Activity("EpubReaderFootnotes", renderer, mappedInput),
         footnotes(footnotes),
         onGoBack(onGoBack),
         onSelectFootnote(onSelectFootnote),

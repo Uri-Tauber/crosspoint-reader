@@ -1,7 +1,6 @@
-#pragma once
-#include <cstdlib>
-#include <cstring>
-#include <memory>
+#include <SdFat.h>
+#include <vector>
+
 #include <utility>
 
 #include "FootnoteEntry.h"
@@ -17,8 +16,8 @@ class PageElement {
   int16_t yPos;
   explicit PageElement(const int16_t xPos, const int16_t yPos) : xPos(xPos), yPos(yPos) {}
   virtual ~PageElement() = default;
-  virtual void render(GfxRenderer& renderer, int fontId) = 0;
-  virtual void serialize(std::ostream& os) = 0;
+  virtual void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) = 0;
+  virtual bool serialize(FsFile& file) = 0;
 };
 
 class PageLine final : public PageElement {
@@ -27,74 +26,29 @@ class PageLine final : public PageElement {
  public:
   PageLine(std::shared_ptr<TextBlock> block, const int16_t xPos, const int16_t yPos)
       : PageElement(xPos, yPos), block(std::move(block)) {}
-  void render(GfxRenderer& renderer, int fontId) override;
-  void serialize(std::ostream& os) override;
-  static std::unique_ptr<PageLine> deserialize(std::istream& is);
+  void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) override;
+  bool serialize(FsFile& file) override;
+  static std::unique_ptr<PageLine> deserialize(FsFile& file);
 };
 
 class Page {
- private:
-  std::shared_ptr<PageElement>* elements;
-  int elementCapacity;
-
-  FootnoteEntry* footnotes;
-  int footnoteCapacity;
-
  public:
-  int elementCount;
-  int footnoteCount;
-
-  Page() : elementCount(0), footnoteCount(0) {
-    elementCapacity = 24;
-    elements = new std::shared_ptr<PageElement>[elementCapacity];
-
-    footnoteCapacity = 16;
-    footnotes = new FootnoteEntry[footnoteCapacity];
-    for (int i = 0; i < footnoteCapacity; i++) {
-      footnotes[i].number[0] = '\0';
-      footnotes[i].href[0] = '\0';
-    }
-  }
-
-  ~Page() {
-    delete[] elements;
-    delete[] footnotes;
-  }
-
-  Page(const Page&) = delete;
-  Page& operator=(const Page&) = delete;
-
-  void addElement(std::shared_ptr<PageElement> element) {
-    if (elementCount < elementCapacity) {
-      elements[elementCount++] = element;
-    }
-  }
+  // the list of block index and line numbers on this page
+  std::vector<std::shared_ptr<PageElement>> elements;
+  std::vector<FootnoteEntry> footnotes;
 
   void addFootnote(const char* number, const char* href) {
-    if (footnoteCount < footnoteCapacity) {
-      strncpy(footnotes[footnoteCount].number, number, 2);
-      footnotes[footnoteCount].number[2] = '\0';
-      strncpy(footnotes[footnoteCount].href, href, 63);
-      footnotes[footnoteCount].href[63] = '\0';
-      footnoteCount++;
-    }
+    FootnoteEntry entry;
+    // ensure null termination and bounds
+    strncpy(entry.number, number, 2);
+    entry.number[2] = '\0';
+    strncpy(entry.href, href, 63);
+    entry.href[63] = '\0';
+    entry.isInline = false; // Default
+    footnotes.push_back(entry);
   }
 
-  std::shared_ptr<PageElement> getElement(int index) const {
-    if (index >= 0 && index < elementCount) {
-      return elements[index];
-    }
-    return nullptr;
-  }
-
-  FootnoteEntry* getFootnote(int index) {
-    if (index >= 0 && index < footnoteCount) {
-      return &footnotes[index];
-    }
-    return nullptr;
-  }
-
-  void render(GfxRenderer& renderer, int fontId) const;
-  void serialize(std::ostream& os) const;
-  static std::unique_ptr<Page> deserialize(std::istream& is);
+  void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) const;
+  bool serialize(FsFile& file) const;
+  static std::unique_ptr<Page> deserialize(FsFile& file);
 };

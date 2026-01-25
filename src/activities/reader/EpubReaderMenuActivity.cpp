@@ -1,8 +1,10 @@
 #include "EpubReaderMenuActivity.h"
 
 #include <GfxRenderer.h>
+#include <EpdFontFamily.h>
 
-#include "config.h"
+#include "fontIds.h"
+#include "MappedInputManager.h"
 
 constexpr int MENU_ITEMS_COUNT = 2;
 
@@ -38,13 +40,13 @@ void EpubReaderMenuActivity::onExit() {
 
 void EpubReaderMenuActivity::loop() {
   const bool prevReleased =
-      inputManager.wasReleased(InputManager::BTN_UP) || inputManager.wasReleased(InputManager::BTN_LEFT);
+      mappedInput.wasReleased(MappedInputManager::Button::Up) || mappedInput.wasReleased(MappedInputManager::Button::Left);
   const bool nextReleased =
-      inputManager.wasReleased(InputManager::BTN_DOWN) || inputManager.wasReleased(InputManager::BTN_RIGHT);
+      mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right);
 
-  if (inputManager.wasPressed(InputManager::BTN_CONFIRM)) {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
     onSelectOption(static_cast<MenuOption>(selectorIndex));
-  } else if (inputManager.wasPressed(InputManager::BTN_BACK)) {
+  } else if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
     onGoBack();
   } else if (prevReleased) {
     selectorIndex = (selectorIndex + MENU_ITEMS_COUNT - 1) % MENU_ITEMS_COUNT;
@@ -71,7 +73,7 @@ void EpubReaderMenuActivity::renderScreen() {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
-  renderer.drawCenteredText(READER_FONT_ID, 10, "Menu", true, BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 10, "Menu", true, EpdFontFamily::BOLD);
 
   const char* menuItems[MENU_ITEMS_COUNT] = {"Go to chapter", "View footnotes"};
 
@@ -84,9 +86,9 @@ void EpubReaderMenuActivity::renderScreen() {
     // Draw selection indicator
     if (i == selectorIndex) {
       renderer.fillRect(10, y + 2, pageWidth - 20, itemHeight - 4);
-      renderer.drawText(UI_FONT_ID, 30, y, menuItems[i], false);
+      renderer.drawText(UI_12_FONT_ID, 30, y, menuItems[i], false);
     } else {
-      renderer.drawText(UI_FONT_ID, 30, y, menuItems[i], true);
+      renderer.drawText(UI_12_FONT_ID, 30, y, menuItems[i], true);
     }
   }
 

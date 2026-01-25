@@ -3,39 +3,34 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
-#include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
-#include "../Activity.h"
+#include "activities/ActivityWithSubactivity.h"
 
 class CrossPointSettings;
+struct SettingInfo;
 
-// Structure to hold setting information
-struct SettingInfo {
-  const char* name;                        // Display name of the setting
-  uint8_t CrossPointSettings::* valuePtr;  // Pointer to member in CrossPointSettings
-};
-
-class SettingsActivity final : public Activity {
+class SettingsActivity final : public ActivityWithSubactivity {
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
   bool updateRequired = false;
-  int selectedSettingIndex = 0;  // Currently selected setting
+  int selectedCategoryIndex = 0;  // Currently selected category
   const std::function<void()> onGoHome;
 
-  // Static settings list
-  static constexpr int settingsCount = 2;  // Number of settings
-  static const SettingInfo settingsList[settingsCount];
+  static constexpr int categoryCount = 4;
+  static const char* categoryNames[categoryCount];
 
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void render() const;
-  void toggleCurrentSetting();
+  void enterCategory(int categoryIndex);
 
  public:
-  explicit SettingsActivity(GfxRenderer& renderer, InputManager& inputManager, const std::function<void()>& onGoHome)
-      : Activity(renderer, inputManager), onGoHome(onGoHome) {}
+  explicit SettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
+                            const std::function<void()>& onGoHome)
+      : ActivityWithSubactivity("Settings", renderer, mappedInput), onGoHome(onGoHome) {}
   void onEnter() override;
   void onExit() override;
   void loop() override;

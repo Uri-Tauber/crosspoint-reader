@@ -3,72 +3,73 @@
 #include <HardwareSerial.h>
 #include <Serialization.h>
 
-namespace {
-constexpr uint8_t PAGE_FILE_VERSION = 3;
+void PageLine::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) {
+  block->render(renderer, fontId, xPos + xOffset, yPos + yOffset);
 }
 
-void PageLine::render(GfxRenderer& renderer, const int fontId) { block->render(renderer, fontId, xPos, yPos); }
+bool PageLine::serialize(FsFile& file) {
+  serialization::writePod(file, xPos);
+  serialization::writePod(file, yPos);
 
-void PageLine::serialize(std::ostream& os) {
-  serialization::writePod(os, xPos);
-  serialization::writePod(os, yPos);
-  block->serialize(os);
+  // serialize TextBlock pointed to by PageLine
+  return block->serialize(file);
 }
 
-std::unique_ptr<PageLine> PageLine::deserialize(std::istream& is) {
+std::unique_ptr<PageLine> PageLine::deserialize(FsFile& file) {
   int16_t xPos;
   int16_t yPos;
-  serialization::readPod(is, xPos);
-  serialization::readPod(is, yPos);
+  serialization::readPod(file, xPos);
+  serialization::readPod(file, yPos);
 
-  auto tb = TextBlock::deserialize(is);
+  auto tb = TextBlock::deserialize(file);
   return std::unique_ptr<PageLine>(new PageLine(std::move(tb), xPos, yPos));
 }
 
-void Page::render(GfxRenderer& renderer, const int fontId) const {
-  for (int i = 0; i < elementCount; i++) {
-    elements[i]->render(renderer, fontId);
+void Page::render(GfxRenderer& renderer, const int fontId, const int xOffset, const int yOffset) const {
+  for (auto& element : elements) {
+    element->render(renderer, fontId, xOffset, yOffset);
   }
 }
 
-void Page::serialize(std::ostream& os) const {
-  serialization::writePod(os, PAGE_FILE_VERSION);
-  serialization::writePod(os, static_cast<uint32_t>(elementCount));
+bool Page::serialize(FsFile& file) const {
+  const uint16_t count = elements.size();
+  serialization::writePod(file, count);
 
-  for (int i = 0; i < elementCount; i++) {
-    serialization::writePod(os, static_cast<uint8_t>(TAG_PageLine));
-    elements[i]->serialize(os);
+  for (const auto& el : elements) {
+    // Only PageLine exists currently
+    serialization::writePod(file, static_cast<uint8_t>(TAG_PageLine));
+    if (!el->serialize(file)) {
+      return false;
+    }
   }
 
-  serialization::writePod(os, static_cast<int32_t>(footnoteCount));
-  for (int i = 0; i < footnoteCount; i++) {
-    os.write(footnotes[i].number, 3);
-    os.write(footnotes[i].href, 64);
-    uint8_t isInlineFlag = footnotes[i].isInline ? 1 : 0;
-    os.write(reinterpret_cast<const char*>(&isInlineFlag), 1);
+  // Serialize footnotes
+  int32_t fCount = footnotes.size();
+  serialization::writePod(file, fCount);
+  for (const auto& fn : footnotes) {
+    file.write(fn.number, 3);
+    file.write(fn.href, 64);
+    uint8_t isInlineFlag = fn.isInline ? 1 : 0;
+    file.write(&isInlineFlag, 1);
   }
+
+
+  return true;
 }
 
-std::unique_ptr<Page> Page::deserialize(std::istream& is) {
-  uint8_t version;
-  serialization::readPod(is, version);
-  if (version != PAGE_FILE_VERSION) {
-    Serial.printf("[%lu] [PGE] Deserialization failed: Unknown version %u\n", millis(), version);
-    return nullptr;
-  }
-
+std::unique_ptr<Page> Page::deserialize(FsFile& file) {
   auto page = std::unique_ptr<Page>(new Page());
 
-  uint32_t count;
-  serialization::readPod(is, count);
+  uint16_t count;
+  serialization::readPod(file, count);
 
-  for (uint32_t i = 0; i < count && i < page->elementCapacity; i++) {
+  for (uint16_t i = 0; i < count; i++) {
     uint8_t tag;
-    serialization::readPod(is, tag);
+    serialization::readPod(file, tag);
 
     if (tag == TAG_PageLine) {
-      auto pl = PageLine::deserialize(is);
-      page->addElement(std::move(pl));
+      auto pl = PageLine::deserialize(file);
+      page->elements.push_back(std::move(pl));
     } else {
       Serial.printf("[%lu] [PGE] Deserialization failed: Unknown tag %u\n", millis(), tag);
       return nullptr;
@@ -76,15 +77,16 @@ std::unique_ptr<Page> Page::deserialize(std::istream& is) {
   }
 
   int32_t footnoteCount;
-  serialization::readPod(is, footnoteCount);
-  page->footnoteCount = (footnoteCount < page->footnoteCapacity) ? footnoteCount : page->footnoteCapacity;
-
-  for (int i = 0; i < page->footnoteCount; i++) {
-    is.read(page->footnotes[i].number, 3);
-    is.read(page->footnotes[i].href, 64);
+  serialization::readPod(file, footnoteCount);
+  
+  for (int i = 0; i < footnoteCount; i++) {
+    FootnoteEntry entry;
+    file.read(entry.number, 3);
+    file.read(entry.href, 64);
     uint8_t isInlineFlag = 0;
-    is.read(reinterpret_cast<char*>(&isInlineFlag), 1);
-    page->footnotes[i].isInline = (isInlineFlag != 0);
+    file.read(&isInlineFlag, 1);
+    entry.isInline = (isInlineFlag != 0);
+    page->footnotes.push_back(entry);
   }
 
   return page;

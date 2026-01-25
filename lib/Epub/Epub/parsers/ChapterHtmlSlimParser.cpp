@@ -2,28 +2,30 @@
 
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
-#include <SD.h>
+#include <SDCardManager.h>
 #include <expat.h>
 
 #include "../Page.h"
-#include "../htmlEntities.h"
 
 const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
 constexpr int NUM_HEADER_TAGS = sizeof(HEADER_TAGS) / sizeof(HEADER_TAGS[0]);
 
-const char* BLOCK_TAGS[] = {"p", "li", "div", "br"};
+// Minimum file size (in bytes) to show progress bar - smaller chapters don't benefit from it
+constexpr size_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
+
+const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote"};
 constexpr int NUM_BLOCK_TAGS = sizeof(BLOCK_TAGS) / sizeof(BLOCK_TAGS[0]);
 
-const char* BOLD_TAGS[] = {"b"};
+const char* BOLD_TAGS[] = {"b", "strong"};
 constexpr int NUM_BOLD_TAGS = sizeof(BOLD_TAGS) / sizeof(BOLD_TAGS[0]);
 
-const char* ITALIC_TAGS[] = {"i"};
+const char* ITALIC_TAGS[] = {"i", "em"};
 constexpr int NUM_ITALIC_TAGS = sizeof(ITALIC_TAGS) / sizeof(ITALIC_TAGS[0]);
 
 const char* IMAGE_TAGS[] = {"img"};
 constexpr int NUM_IMAGE_TAGS = sizeof(IMAGE_TAGS) / sizeof(IMAGE_TAGS[0]);
 
-const char* SKIP_TAGS[] = {"head", "table"};
+const char* SKIP_TAGS[] = {"head"};
 constexpr int NUM_SKIP_TAGS = sizeof(SKIP_TAGS) / sizeof(SKIP_TAGS[0]);
 
 bool isWhitespace(const char c) { return c == ' ' || c == '\r' || c == '\n' || c == '\t'; }
@@ -48,7 +50,42 @@ const char* getAttribute(const XML_Char** atts, const char* attrName) {
   return nullptr;
 }
 
-void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::BLOCK_STYLE style) {
+// Simple HTML entity replacement for noteref text
+std::string replaceHtmlEntities(const char* text) {
+  if (!text) return "";
+  std::string s(text);
+  
+  // Replace common entities
+  size_t pos = 0;
+  while ((pos = s.find("&lt;", pos)) != std::string::npos) {
+    s.replace(pos, 4, "<");
+    pos += 1;
+  }
+  pos = 0;
+  while ((pos = s.find("&gt;", pos)) != std::string::npos) {
+    s.replace(pos, 4, ">");
+    pos += 1;
+  }
+  pos = 0;
+  while ((pos = s.find("&amp;", pos)) != std::string::npos) {
+    s.replace(pos, 5, "&");
+    pos += 1;
+  }
+  pos = 0;
+  while ((pos = s.find("&quot;", pos)) != std::string::npos) {
+    s.replace(pos, 6, "\"");
+    pos += 1;
+  }
+  pos = 0;
+  while ((pos = s.find("&apos;", pos)) != std::string::npos) {
+    s.replace(pos, 6, "'");
+    pos += 1;
+  }
+  return s;
+}
+
+// start a new text block if needed
+void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::Style style) {
   if (currentTextBlock) {
     if (currentTextBlock->isEmpty()) {
       currentTextBlock->setStyle(style);
@@ -56,7 +93,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::BLOCK_STYLE style
     }
     makePages();
   }
-  currentTextBlock.reset(new ParsedText(style, extraParagraphSpacing));
+  currentTextBlock.reset(new ParsedText(style, extraParagraphSpacing, hyphenationEnabled));
 }
 
 void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const char* href) {
@@ -236,6 +273,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   // PASS 2: Normal parsing
   // ============================================================================
 
+
   // Middle of skip
   if (self->skipUntilDepth < self->depth) {
     self->depth += 1;
@@ -262,13 +300,13 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       // Flush any pending word before starting noteref collection
       // This ensures proper word order in the text flow
       if (self->partWordBufferIndex > 0) {
-        EpdFontStyle fontStyle = REGULAR;
+        EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
         if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-          fontStyle = BOLD_ITALIC;
+          fontStyle = EpdFontFamily::BOLD_ITALIC;
         } else if (self->boldUntilDepth < self->depth) {
-          fontStyle = BOLD;
+          fontStyle = EpdFontFamily::BOLD;
         } else if (self->italicUntilDepth < self->depth) {
-          fontStyle = ITALIC;
+          fontStyle = EpdFontFamily::ITALIC;
         }
 
         self->partWordBuffer[self->partWordBufferIndex] = '\0';
@@ -297,9 +335,65 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   }
 
   if (matches(name, IMAGE_TAGS, NUM_IMAGE_TAGS)) {
+    // TODO: Start processing image tags
+    std::string alt;
+    if (atts != nullptr) {
+      for (int i = 0; atts[i]; i += 2) {
+        if (strcmp(atts[i], "alt") == 0) {
+          alt = "[Image: " + std::string(atts[i + 1]) + "]";
+        }
+      }
+      Serial.printf("[%lu] [EHP] Image alt: %s\n", millis(), alt.c_str());
+
+      self->startNewTextBlock(TextBlock::CENTER_ALIGN);
+      self->italicUntilDepth = min(self->italicUntilDepth, self->depth);
+      self->depth += 1;
+      self->characterData(userData, alt.c_str(), alt.length());
+
+    } else {
+      // Skip for now
+      self->skipUntilDepth = self->depth;
+      self->depth += 1;
+      return;
+    }
+  }
+  
+  // Special handling for tables - show placeholder text instead of dropping silently
+  if (strcmp(name, "table") == 0) {
+    // Add placeholder text
+    self->startNewTextBlock(TextBlock::CENTER_ALIGN);
+    if (self->currentTextBlock) {
+      self->currentTextBlock->addWord("[Table omitted]", EpdFontFamily::ITALIC);
+    }
+
+    // Skip table contents
     self->skipUntilDepth = self->depth;
     self->depth += 1;
     return;
+  }
+
+  if (matches(name, IMAGE_TAGS, NUM_IMAGE_TAGS)) {
+    // TODO: Start processing image tags
+    std::string alt;
+    if (atts != nullptr) {
+      for (int i = 0; atts[i]; i += 2) {
+        if (strcmp(atts[i], "alt") == 0) {
+          alt = "[Image: " + std::string(atts[i + 1]) + "]";
+        }
+      }
+      Serial.printf("[%lu] [EHP] Image alt: %s\n", millis(), alt.c_str());
+
+      self->startNewTextBlock(TextBlock::CENTER_ALIGN);
+      self->italicUntilDepth = min(self->italicUntilDepth, self->depth);
+      self->depth += 1;
+      self->characterData(userData, alt.c_str(), alt.length());
+
+    } else {
+      // Skip for now
+      self->skipUntilDepth = self->depth;
+      self->depth += 1;
+      return;
+    }
   }
 
   if (matches(name, SKIP_TAGS, NUM_SKIP_TAGS)) {
@@ -308,19 +402,34 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     return;
   }
 
+  // Skip blocks with role="doc-pagebreak" and epub:type="pagebreak"
+  if (atts != nullptr) {
+    for (int i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "role") == 0 && strcmp(atts[i + 1], "doc-pagebreak") == 0 ||
+          strcmp(atts[i], "epub:type") == 0 && strcmp(atts[i + 1], "pagebreak") == 0) {
+        self->skipUntilDepth = self->depth;
+        self->depth += 1;
+        return;
+      }
+    }
+  }
+
   if (matches(name, HEADER_TAGS, NUM_HEADER_TAGS)) {
     self->startNewTextBlock(TextBlock::CENTER_ALIGN);
-    self->boldUntilDepth = min(self->boldUntilDepth, self->depth);
+    self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
   } else if (matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS)) {
     if (strcmp(name, "br") == 0) {
       self->startNewTextBlock(self->currentTextBlock->getStyle());
     } else {
-      self->startNewTextBlock(TextBlock::JUSTIFIED);
+      self->startNewTextBlock((TextBlock::Style)self->paragraphAlignment);
+      if (strcmp(name, "li") == 0) {
+        self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR);
+      }
     }
   } else if (matches(name, BOLD_TAGS, NUM_BOLD_TAGS)) {
-    self->boldUntilDepth = min(self->boldUntilDepth, self->depth);
+    self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
   } else if (matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS)) {
-    self->italicUntilDepth = min(self->italicUntilDepth, self->depth);
+    self->italicUntilDepth = std::min(self->italicUntilDepth, self->depth);
   }
 
   self->depth += 1;
@@ -407,37 +516,69 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     return;
   }
 
-  EpdFontStyle fontStyle = REGULAR;
+  EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
   if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-    fontStyle = BOLD_ITALIC;
+    fontStyle = EpdFontFamily::BOLD_ITALIC;
   } else if (self->boldUntilDepth < self->depth) {
-    fontStyle = BOLD;
+    fontStyle = EpdFontFamily::BOLD;
   } else if (self->italicUntilDepth < self->depth) {
-    fontStyle = ITALIC;
+    fontStyle = EpdFontFamily::ITALIC;
   }
 
   for (int i = 0; i < len; i++) {
     if (isWhitespace(s[i])) {
       if (self->partWordBufferIndex > 0) {
         self->partWordBuffer[self->partWordBufferIndex] = '\0';
-        self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
+        self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
         self->partWordBufferIndex = 0;
       }
       continue;
     }
 
+    // If we're about to run out of space, then cut the word off and start a new one
     if (self->partWordBufferIndex >= MAX_WORD_SIZE) {
       self->partWordBuffer[self->partWordBufferIndex] = '\0';
-      self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
+      self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
+      self->partWordBufferIndex = 0;
+    }
+
+    // Skip Zero Width No-Break Space / BOM (U+FEFF) = 0xEF 0xBB 0xBF
+    const XML_Char FEFF_BYTE_1 = static_cast<XML_Char>(0xEF);
+    const XML_Char FEFF_BYTE_2 = static_cast<XML_Char>(0xBB);
+    const XML_Char FEFF_BYTE_3 = static_cast<XML_Char>(0xBF);
+
+    if (s[i] == FEFF_BYTE_1) {
+      // Check if the next two bytes complete the 3-byte sequence
+      if ((i + 2 < len) && (s[i + 1] == FEFF_BYTE_2) && (s[i + 2] == FEFF_BYTE_3)) {
+        // Sequence 0xEF 0xBB 0xBF found!
+        i += 2;    // Skip the next two bytes
+        continue;  // Move to the next iteration
+      }
+    }
+    if (self->partWordBufferIndex >= MAX_WORD_SIZE) {
+      self->partWordBuffer[self->partWordBufferIndex] = '\0';
+      self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
       self->partWordBufferIndex = 0;
     }
 
     self->partWordBuffer[self->partWordBufferIndex++] = s[i];
   }
+
+  // If we have > 750 words buffered up, perform the layout and consume out all but the last line
+  // There should be enough here to build out 1-2 full pages and doing this will free up a lot of
+  // memory.
+  // Spotted when reading Intermezzo, there are some really long text blocks in there.
+  if (self->currentTextBlock->size() > 750) {
+    Serial.printf("[%lu] [EHP] Text block too long, splitting into multiple pages\n", millis());
+    self->currentTextBlock->layoutAndExtractLines(
+        self->renderer, self->fontId, self->viewportWidth,
+        [self](const std::shared_ptr<TextBlock>& textBlock) { self->addLineToPage(textBlock); }, false);
+  }
 }
 
 void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* name) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
+
 
   // Closing paragraph note in Pass 1
   if (strcmp(name, "p") == 0 && self->insideParagraphNote && self->depth - 1 == self->paragraphNoteDepth) {
@@ -528,13 +669,13 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
       }
 
       // Ensure [1] appears inline after the word it references
-      EpdFontStyle fontStyle = REGULAR;
+      EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
       if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-        fontStyle = BOLD_ITALIC;
+        fontStyle = EpdFontFamily::BOLD_ITALIC;
       } else if (self->boldUntilDepth < self->depth) {
-        fontStyle = BOLD;
+        fontStyle = EpdFontFamily::BOLD;
       } else if (self->italicUntilDepth < self->depth) {
-        fontStyle = ITALIC;
+        fontStyle = EpdFontFamily::ITALIC;
       }
 
       // Format the noteref text with brackets
@@ -555,23 +696,24 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     return;
   }
 
+
   if (self->partWordBufferIndex > 0) {
     const bool shouldBreakText =
         matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) || matches(name, HEADER_TAGS, NUM_HEADER_TAGS) ||
         matches(name, BOLD_TAGS, NUM_BOLD_TAGS) || matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) || self->depth == 1;
 
     if (shouldBreakText) {
-      EpdFontStyle fontStyle = REGULAR;
+      EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
       if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-        fontStyle = BOLD_ITALIC;
+        fontStyle = EpdFontFamily::BOLD_ITALIC;
       } else if (self->boldUntilDepth < self->depth) {
-        fontStyle = BOLD;
+        fontStyle = EpdFontFamily::BOLD;
       } else if (self->italicUntilDepth < self->depth) {
-        fontStyle = ITALIC;
+        fontStyle = EpdFontFamily::ITALIC;
       }
 
       self->partWordBuffer[self->partWordBufferIndex] = '\0';
-      self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
+      self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
       self->partWordBufferIndex = 0;
     }
   }
@@ -616,45 +758,44 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   XML_SetElementHandler(parser1, startElement, endElement);
   XML_SetCharacterDataHandler(parser1, characterData);
 
-  FILE* file = fopen(filepath, "r");
-  if (!file) {
-    Serial.printf("[%lu] [EHP] Couldn't open file %s\n", millis(), filepath);
+  FsFile file;
+  if (!SdMan.openFileForRead("EHP", filepath, file)) {
     XML_ParserFree(parser1);
     return false;
   }
 
-  int done;
+  bool done = false;
   do {
     void* const buf = XML_GetBuffer(parser1, 1024);
     if (!buf) {
       Serial.printf("[%lu] [EHP] Couldn't allocate memory for buffer\n", millis());
       XML_ParserFree(parser1);
-      fclose(file);
+      file.close();
       return false;
     }
 
-    const size_t len = fread(buf, 1, 1024, file);
+    const size_t len = file.read(buf, 1024);
 
-    if (ferror(file)) {
+    if (len == 0 && file.available() > 0) {
       Serial.printf("[%lu] [EHP] File read error\n", millis());
       XML_ParserFree(parser1);
-      fclose(file);
+      file.close();
       return false;
     }
-
-    done = feof(file);
+    
+    done = file.available() == 0;
 
     if (XML_ParseBuffer(parser1, static_cast<int>(len), done) == XML_STATUS_ERROR) {
       Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(), XML_GetCurrentLineNumber(parser1),
                     XML_ErrorString(XML_GetErrorCode(parser1)));
       XML_ParserFree(parser1);
-      fclose(file);
+      file.close();
       return false;
     }
   } while (!done);
 
   XML_ParserFree(parser1);
-  fclose(file);
+  file.close();
 
   Serial.printf("[%lu] [PARSER] Pass 1 complete: found %d inline footnotes\n", millis(), inlineFootnoteCount);
   for (int i = 0; i < inlineFootnoteCount; i++) {
@@ -677,7 +818,7 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   currentPageFootnoteCount = 0;
   isPass1CollectingAsides = false;
 
-  startNewTextBlock(TextBlock::JUSTIFIED);
+  startNewTextBlock((TextBlock::Style)this->paragraphAlignment);
 
   const XML_Parser parser2 = XML_ParserCreate(nullptr);
   if (!parser2) {
@@ -689,44 +830,64 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   XML_SetElementHandler(parser2, startElement, endElement);
   XML_SetCharacterDataHandler(parser2, characterData);
 
-  file = fopen(filepath, "r");
-  if (!file) {
-    Serial.printf("[%lu] [EHP] Couldn't open file %s\n", millis(), filepath);
+  if (!SdMan.openFileForRead("EHP", filepath, file)) {
     XML_ParserFree(parser2);
     return false;
   }
+
+  // Get file size for progress calculation
+  const size_t totalSize = file.size();
+  size_t bytesRead = 0;
+  int lastProgress = -1;
 
   do {
     void* const buf = XML_GetBuffer(parser2, 1024);
     if (!buf) {
       Serial.printf("[%lu] [EHP] Couldn't allocate memory for buffer\n", millis());
       XML_ParserFree(parser2);
-      fclose(file);
+      file.close();
       return false;
     }
 
-    const size_t len = fread(buf, 1, 1024, file);
+    const size_t len = file.read(buf, 1024);
 
-    if (ferror(file)) {
+    if (len == 0 && file.available() > 0) {
       Serial.printf("[%lu] [EHP] File read error\n", millis());
+      XML_StopParser(parser2, XML_FALSE);                // Stop any pending processing
+      XML_SetElementHandler(parser2, nullptr, nullptr);  // Clear callbacks
+      XML_SetCharacterDataHandler(parser2, nullptr);
       XML_ParserFree(parser2);
-      fclose(file);
+      file.close();
       return false;
     }
+    
+    // Update progress (call every 10% change to avoid too frequent updates)
+    // Only show progress for larger chapters where rendering overhead is worth it
+    bytesRead += len;
+    if (progressFn && totalSize >= MIN_SIZE_FOR_PROGRESS) {
+      const int progress = static_cast<int>((bytesRead * 100) / totalSize);
+      if (lastProgress / 10 != progress / 10) {
+        lastProgress = progress;
+        progressFn(progress);
+      }
+    }
 
-    done = feof(file);
+    done = file.available() == 0;
 
     if (XML_ParseBuffer(parser2, static_cast<int>(len), done) == XML_STATUS_ERROR) {
       Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(), XML_GetCurrentLineNumber(parser2),
                     XML_ErrorString(XML_GetErrorCode(parser2)));
+      XML_StopParser(parser2, XML_FALSE);                // Stop any pending processing
+      XML_SetElementHandler(parser2, nullptr, nullptr);  // Clear callbacks
+      XML_SetCharacterDataHandler(parser2, nullptr);
       XML_ParserFree(parser2);
-      fclose(file);
+      file.close();
       return false;
     }
   } while (!done);
 
   XML_ParserFree(parser2);
-  fclose(file);
+  file.close();
 
   // Process last page if there is still text
   if (currentTextBlock) {
@@ -749,9 +910,8 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
 
 void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
-  const int pageHeight = GfxRenderer::getScreenHeight() - marginTop - marginBottom;
 
-  if (currentPageNextY + lineHeight > pageHeight) {
+  if (currentPageNextY + lineHeight > viewportHeight) {
     if (currentPage) {
       for (int i = 0; i < currentPageFootnoteCount; i++) {
         currentPage->addFootnote(currentPageFootnotes[i].number, currentPageFootnotes[i].href);
@@ -761,13 +921,13 @@ void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
 
     completePageFn(std::move(currentPage));
     currentPage.reset(new Page());
-    currentPageNextY = marginTop;
+    currentPageNextY = 0;
   }
 
-  if (currentPage && currentPage->elementCount < 24) {
-    currentPage->addElement(std::make_shared<PageLine>(line, marginLeft, currentPageNextY));
+  if (currentPage && currentPage->elements.size() < 24) { // Assuming generic capacity check or vector size
+    currentPage->elements.push_back(std::make_shared<PageLine>(line, 0, currentPageNextY));
     currentPageNextY += lineHeight;
-  } else {
+  } else if (currentPage) {
     Serial.printf("[%lu] [EHP] WARNING: Page element capacity reached, skipping element\n", millis());
   }
 }
@@ -780,12 +940,12 @@ void ChapterHtmlSlimParser::makePages() {
 
   if (!currentPage) {
     currentPage.reset(new Page());
-    currentPageNextY = marginTop;
+    currentPageNextY = 0;
   }
 
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
   currentTextBlock->layoutAndExtractLines(
-      renderer, fontId, marginLeft + marginRight,
+      renderer, fontId, viewportWidth,
       [this](const std::shared_ptr<TextBlock>& textBlock) { addLineToPage(textBlock); });
   // Extra paragraph spacing if enabled
   if (extraParagraphSpacing) {
