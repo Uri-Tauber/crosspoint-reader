@@ -17,6 +17,7 @@ class EpubReaderChapterSelectionActivity final : public ActivityWithSubactivity 
   int currentPage = 0;
   int totalPagesInSpine = 0;
   int selectorIndex = 0;
+  std::vector<int> filteredTocIndices;
   bool updateRequired = false;
   const std::function<void()> onGoBack;
   const std::function<void(int newSpineIndex)> onSelectSpineIndex;

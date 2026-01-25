@@ -17,7 +17,7 @@ bool EpubReaderChapterSelectionActivity::hasSyncOption() const { return KOREADER
 int EpubReaderChapterSelectionActivity::getTotalItems() const {
   // Add 2 for sync options (top and bottom) if credentials are configured
   const int syncCount = hasSyncOption() ? 2 : 0;
-  return epub->getTocItemsCount() + syncCount;
+  return filteredTocIndices.size() + syncCount;
 }
 
 bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
@@ -29,7 +29,11 @@ bool EpubReaderChapterSelectionActivity::isSyncItem(int index) const {
 int EpubReaderChapterSelectionActivity::tocIndexFromItemIndex(int itemIndex) const {
   // Account for the sync option at the top
   const int offset = hasSyncOption() ? 1 : 0;
-  return itemIndex - offset;
+  int filteredIndex = itemIndex - offset;
+  if (filteredIndex >= 0 && filteredIndex < static_cast<int>(filteredTocIndices.size())) {
+    return filteredTocIndices[filteredIndex];
+  }
+  return -1;
 }
 
 int EpubReaderChapterSelectionActivity::getPageItems() const {
@@ -62,13 +66,26 @@ void EpubReaderChapterSelectionActivity::onEnter() {
     return;
   }
 
+  // Build filtered TOC list
+  filteredTocIndices.clear();
+  for (int i = 0; i < epub->getTocItemsCount(); i++) {
+    int spineIndex = epub->getSpineIndexForTocIndex(i);
+    if (!epub->shouldHideFromToc(spineIndex)) {
+      filteredTocIndices.push_back(i);
+    }
+  }
+
   renderingMutex = xSemaphoreCreateMutex();
 
   // Account for sync option offset when finding current TOC index
   const int syncOffset = hasSyncOption() ? 1 : 0;
-  selectorIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
-  if (selectorIndex == -1) {
-    selectorIndex = 0;
+  int currentTocIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
+  selectorIndex = 0;
+  for (size_t i = 0; i < filteredTocIndices.size(); i++) {
+    if (filteredTocIndices[i] == currentTocIndex) {
+      selectorIndex = i;
+      break;
+    }
   }
   selectorIndex += syncOffset;  // Offset for top sync option
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <Epub.h>
+#include <Epub/FootnoteEntry.h>
 #include <Epub/Section.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
@@ -16,6 +17,11 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   int nextPageNumber = 0;
   int pagesUntilFullRefresh = 0;
   bool updateRequired = false;
+
+  std::vector<FootnoteEntry> currentPageFootnotes;
+  int savedSpineIndex = -1;
+  int savedPageNumber = -1;
+  bool isViewingFootnote = false;
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 
@@ -25,6 +31,8 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
+  void navigateToHref(const char* href, bool savePosition);
+  void restoreSavedPosition();
 
  public:
   explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Epub> epub,

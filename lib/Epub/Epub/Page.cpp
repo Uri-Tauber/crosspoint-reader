@@ -43,6 +43,12 @@ bool Page::serialize(FsFile& file) const {
     }
   }
 
+  const uint16_t footnoteCount = footnotes.size();
+  serialization::writePod(file, footnoteCount);
+  for (const auto& fn : footnotes) {
+    file.write(reinterpret_cast<const uint8_t*>(&fn), sizeof(FootnoteEntry));
+  }
+
   return true;
 }
 
@@ -63,6 +69,14 @@ std::unique_ptr<Page> Page::deserialize(FsFile& file) {
       Serial.printf("[%lu] [PGE] Deserialization failed: Unknown tag %u\n", millis(), tag);
       return nullptr;
     }
+  }
+
+  uint16_t footnoteCount;
+  serialization::readPod(file, footnoteCount);
+  for (uint16_t i = 0; i < footnoteCount; i++) {
+    FootnoteEntry fn;
+    file.read(reinterpret_cast<uint8_t*>(&fn), sizeof(FootnoteEntry));
+    page->footnotes.push_back(fn);
   }
 
   return page;

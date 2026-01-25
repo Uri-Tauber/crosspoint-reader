@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "Epub/BookMetadataCache.h"
@@ -24,6 +25,10 @@ class Epub {
   std::string cachePath;
   // Spine and TOC cache
   std::unique_ptr<BookMetadataCache> bookMetadataCache;
+
+  // Footnote tracking
+  std::unordered_set<std::string> footnotePages;
+  std::vector<std::string> virtualSpineItems;
 
   bool findContentOpfFile(std::string* contentOpfFile) const;
   bool parseContentOpf(BookMetadataCache::BookMetadata& bookMetadata);
@@ -61,6 +66,16 @@ class Epub {
   int getTocIndexForSpineIndex(int spineIndex) const;
   size_t getCumulativeSpineItemSize(int spineIndex) const;
   int getSpineIndexForTextReference() const;
+
+  void markAsFootnotePage(const std::string& href);
+  bool isFootnotePage(const std::string& filename) const;
+  bool shouldHideFromToc(int spineIndex) const;
+  int addVirtualSpineItem(const std::string& path);
+  bool isVirtualSpineItem(int spineIndex) const;
+  int findVirtualSpineIndex(const std::string& filename) const;
+
+  bool loadFootnoteMetadata();
+  void saveFootnoteMetadata() const;
 
   size_t getBookSize() const;
   float calculateProgress(int currentSpineIndex, float currentSpineRead) const;

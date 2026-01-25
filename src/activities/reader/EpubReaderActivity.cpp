@@ -8,6 +8,8 @@
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
 #include "EpubReaderChapterSelectionActivity.h"
+#include "EpubReaderFootnotesActivity.h"
+#include "EpubReaderMenuActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -116,37 +118,51 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // Enter chapter selection activity
+  // Enter reader menu
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Don't start activity transition while rendering
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
-    exitActivity();
-    enterNewActivity(new EpubReaderChapterSelectionActivity(
-        this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
-        [this] {
-          exitActivity();
-          updateRequired = true;
-        },
-        [this](const int newSpineIndex) {
-          if (currentSpineIndex != newSpineIndex) {
-            currentSpineIndex = newSpineIndex;
-            nextPageNumber = 0;
-            section.reset();
+    enterNewActivity(new EpubReaderMenuActivity(
+        this->renderer, this->mappedInput, [this] { exitActivity(); updateRequired = true; },
+        [this, currentPage, totalPages](const EpubReaderMenuActivity::MenuOption option) {
+          if (option == EpubReaderMenuActivity::CHAPTERS) {
+            exitActivity();
+            enterNewActivity(new EpubReaderChapterSelectionActivity(
+                this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
+                [this] {
+                  exitActivity();
+                  updateRequired = true;
+                },
+                [this](const int newSpineIndex) {
+                  if (currentSpineIndex != newSpineIndex) {
+                    currentSpineIndex = newSpineIndex;
+                    nextPageNumber = 0;
+                    section.reset();
+                  }
+                  exitActivity();
+                  updateRequired = true;
+                },
+                [this](const int newSpineIndex, const int newPage) {
+                  // Handle sync position
+                  if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
+                    currentSpineIndex = newSpineIndex;
+                    nextPageNumber = newPage;
+                    section.reset();
+                  }
+                  exitActivity();
+                  updateRequired = true;
+                }));
+          } else if (option == EpubReaderMenuActivity::FOOTNOTES) {
+            exitActivity();
+            enterNewActivity(new EpubReaderFootnotesActivity(
+                this->renderer, this->mappedInput, currentPageFootnotes, [this] { exitActivity(); updateRequired = true; },
+                [this](const char* href) {
+                  exitActivity();
+                  navigateToHref(href, true);
+                }));
           }
-          exitActivity();
-          updateRequired = true;
-        },
-        [this](const int newSpineIndex, const int newPage) {
-          // Handle sync position
-          if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
-            currentSpineIndex = newSpineIndex;
-            nextPageNumber = newPage;
-            section.reset();
-          }
-          exitActivity();
-          updateRequired = true;
         }));
     xSemaphoreGive(renderingMutex);
   }
@@ -157,9 +173,13 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // Short press BACK goes to file selection
+  // Short press BACK goes to file selection, or returns from footnote
   if (mappedInput.wasReleased(MappedInputManager::Button::Back) && mappedInput.getHeldTime() < goHomeMs) {
-    onGoBack();
+    if (isViewingFootnote) {
+      restoreSavedPosition();
+    } else {
+      onGoBack();
+    }
     return;
   }
 
@@ -369,6 +389,13 @@ void EpubReaderActivity::renderScreen() {
       section.reset();
       return renderScreen();
     }
+
+    // Collect footnotes for the current page
+    currentPageFootnotes.clear();
+    for (const auto& fn : p->footnotes) {
+      currentPageFootnotes.push_back(fn);
+    }
+
     const auto start = millis();
     renderContents(std::move(p), orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
     Serial.printf("[%lu] [ERS] Rendered page in %dms\n", millis(), millis() - start);
@@ -423,6 +450,132 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
 
   // restore the bw data
   renderer.restoreBwBuffer();
+}
+
+void EpubReaderActivity::navigateToHref(const char* href, const bool savePosition) {
+  if (!epub || !href) return;
+
+  // Save current position if requested
+  if (savePosition && section) {
+    savedSpineIndex = currentSpineIndex;
+    savedPageNumber = section->currentPage;
+    isViewingFootnote = true;
+    Serial.printf("[%lu] [ERS] Saved position: spine %d, page %d\n", millis(), savedSpineIndex, savedPageNumber);
+  }
+
+  // Parse href: "filename.html#anchor"
+  std::string hrefStr(href);
+  std::string filename;
+  std::string anchor;
+
+  size_t hashPos = hrefStr.find('#');
+  if (hashPos != std::string::npos) {
+    filename = hrefStr.substr(0, hashPos);
+    anchor = hrefStr.substr(hashPos + 1);
+  } else {
+    filename = hrefStr;
+  }
+
+  Serial.printf("[%lu] [ERS] Navigate to: %s (anchor: %s)\n", millis(), filename.c_str(), anchor.c_str());
+
+  int targetSpineIndex = -1;
+
+  // FIRST: Check if we have an inline footnote or paragraph note for this anchor
+  if (!anchor.empty()) {
+    // Try inline footnote first
+    std::string inlineFilename = "inline_" + anchor + ".html";
+    targetSpineIndex = epub->findVirtualSpineIndex(inlineFilename);
+
+    // If not found, try paragraph note
+    if (targetSpineIndex == -1) {
+      std::string pnoteFilename = "pnote_" + anchor + ".html";
+      targetSpineIndex = epub->findVirtualSpineIndex(pnoteFilename);
+    }
+
+    if (targetSpineIndex != -1) {
+      Serial.printf("[%lu] [ERS] Found note at virtual index: %d\n", millis(), targetSpineIndex);
+      // Navigate to the note
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      currentSpineIndex = targetSpineIndex;
+      nextPageNumber = 0;
+      section.reset();
+      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+      return;
+    }
+  }
+
+  // FALLBACK: Resolve path and try to find the file in normal spine items
+  std::string targetPath;
+  if (filename.empty()) {
+    targetPath = epub->getSpineItem(currentSpineIndex).href;
+  } else {
+    std::string currentPath = epub->getSpineItem(currentSpineIndex).href;
+    size_t lastSlash = currentPath.find_last_of('/');
+    std::string currentDir = (lastSlash != std::string::npos) ? currentPath.substr(0, lastSlash + 1) : "";
+    targetPath = FsHelpers::normalisePath(currentDir + filename);
+  }
+
+  for (int i = 0; i < epub->getSpineItemsCount(); i++) {
+    if (epub->isVirtualSpineItem(i)) continue;
+    if (epub->getSpineItem(i).href == targetPath) {
+      targetSpineIndex = i;
+      break;
+    }
+  }
+
+  // Last resort: filename only match (useful if relative paths are tricky)
+  if (targetSpineIndex == -1 && !filename.empty()) {
+    size_t lastSlash = filename.find_last_of('/');
+    std::string justFilename = (lastSlash != std::string::npos) ? filename.substr(lastSlash + 1) : filename;
+
+    for (int i = 0; i < epub->getSpineItemsCount(); i++) {
+      if (epub->isVirtualSpineItem(i)) continue;
+      std::string spineItem = epub->getSpineItem(i).href;
+      size_t lastSpineSlash = spineItem.find_last_of('/');
+      std::string spineFilename =
+          (lastSpineSlash != std::string::npos) ? spineItem.substr(lastSpineSlash + 1) : spineItem;
+
+      if (spineFilename == justFilename) {
+        targetSpineIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (targetSpineIndex == -1) {
+    Serial.printf("[%lu] [ERS] Could not find spine index for: %s (path: %s)\n", millis(), filename.c_str(),
+                  targetPath.c_str());
+    return;
+  }
+
+  // Navigate to the target chapter
+  xSemaphoreTake(renderingMutex, portMAX_DELAY);
+  currentSpineIndex = targetSpineIndex;
+  nextPageNumber = 0;
+  section.reset();
+  xSemaphoreGive(renderingMutex);
+
+  updateRequired = true;
+
+  Serial.printf("[%lu] [ERS] Navigated to spine index: %d\n", millis(), targetSpineIndex);
+}
+
+void EpubReaderActivity::restoreSavedPosition() {
+  if (savedSpineIndex >= 0 && savedPageNumber >= 0) {
+    Serial.printf("[%lu] [ERS] Restoring position: spine %d, page %d\n", millis(), savedSpineIndex, savedPageNumber);
+
+    xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    currentSpineIndex = savedSpineIndex;
+    nextPageNumber = savedPageNumber;
+    section.reset();
+    xSemaphoreGive(renderingMutex);
+
+    savedSpineIndex = -1;
+    savedPageNumber = -1;
+    isViewingFootnote = false;
+    updateRequired = true;
+  }
 }
 
 void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const int orientedMarginBottom,

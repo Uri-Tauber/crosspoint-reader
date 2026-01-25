@@ -1,5 +1,7 @@
 #include "ChapterHtmlSlimParser.h"
 
+#include <algorithm>
+
 #include <GfxRenderer.h>
 #include <HardwareSerial.h>
 #include <SDCardManager.h>
@@ -40,6 +42,54 @@ bool matches(const char* tag_name, const char* possible_tags[], const int possib
   return false;
 }
 
+void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const char* href) {
+  if (currentFootnoteCount < 16) {
+    FootnoteEntry& entry = currentFootnotes[currentFootnoteCount++];
+    strncpy(entry.number, number, sizeof(entry.number) - 1);
+    entry.number[sizeof(entry.number) - 1] = '\0';
+
+    // Rewrite href if it points to an inline footnote or paragraph note
+    std::string hrefStr(href);
+    size_t hashPos = hrefStr.find('#');
+    if (hashPos != std::string::npos) {
+      std::string anchor = hrefStr.substr(hashPos + 1);
+
+      // Check if it's an inline footnote
+      bool found = false;
+      for (const auto& fn : inlineFootnotes) {
+        if (fn.id == anchor) {
+          snprintf(entry.href, sizeof(entry.href), "inline_%s.html#%s", anchor.c_str(), anchor.c_str());
+          entry.isInline = true;
+          found = true;
+          break;
+        }
+      }
+
+      // Check if it's a paragraph note
+      if (!found) {
+        for (const auto& fn : paragraphNotes) {
+          if (fn.id == anchor) {
+            snprintf(entry.href, sizeof(entry.href), "pnote_%s.html#%s", anchor.c_str(), anchor.c_str());
+            entry.isInline = true;
+            found = true;
+            break;
+          }
+        }
+      }
+
+      if (!found) {
+        strncpy(entry.href, href, sizeof(entry.href) - 1);
+        entry.href[sizeof(entry.href) - 1] = '\0';
+        entry.isInline = false;
+      }
+    } else {
+      strncpy(entry.href, href, sizeof(entry.href) - 1);
+      entry.href[sizeof(entry.href) - 1] = '\0';
+      entry.isInline = false;
+    }
+  }
+}
+
 // start a new text block if needed
 void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::Style style) {
   if (currentTextBlock) {
@@ -61,6 +111,95 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   if (self->skipUntilDepth < self->depth) {
     self->depth += 1;
     return;
+  }
+
+  // Detect noterefs
+  if (strcmp(name, "a") == 0 && atts != nullptr) {
+    bool isNoteref = false;
+    const char* href = nullptr;
+
+    for (int i = 0; atts[i]; i += 2) {
+      if ((strcmp(atts[i], "class") == 0 && strcmp(atts[i + 1], "noteref") == 0) ||
+          (strcmp(atts[i], "epub:type") == 0 && strcmp(atts[i + 1], "noteref") == 0)) {
+        isNoteref = true;
+      } else if (strcmp(atts[i], "href") == 0) {
+        href = atts[i + 1];
+      }
+    }
+
+    if (isNoteref && href) {
+      self->insideNoteref = true;
+      self->currentNoterefTextLen = 0;
+      self->currentNoterefText[0] = '\0';
+      strncpy(self->currentNoterefHref, href, 127);
+      self->currentNoterefHref[127] = '\0';
+      self->depth += 1;
+      return;
+    }
+  }
+
+  // Detect <aside epub:type="footnote"> for inline footnotes
+  if (strcmp(name, "aside") == 0 && atts != nullptr) {
+    bool isFootnote = false;
+    const char* id = nullptr;
+
+    for (int i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "epub:type") == 0 && strcmp(atts[i + 1], "footnote") == 0) {
+        isFootnote = true;
+      } else if (strcmp(atts[i], "id") == 0) {
+        id = atts[i + 1];
+      }
+    }
+
+    if (isFootnote && id && self->inlineFootnoteCount < 16) {
+      self->insideAsideFootnote = true;
+      self->asideDepth = self->depth;
+      strncpy(self->currentAsideId, id, 15);
+      self->currentAsideId[15] = '\0';
+      self->currentAsideTextLen = 0;
+      self->currentAsideText[0] = '\0';
+      self->depth += 1;
+      return;
+    }
+  }
+
+  // Detect <p class="note"> for some other types of footnotes
+  if (strcmp(name, "p") == 0 && atts != nullptr) {
+    bool isNote = false;
+    for (int i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "class") == 0 && strcmp(atts[i + 1], "note") == 0) {
+        isNote = true;
+        break;
+      }
+    }
+
+    if (isNote && self->paragraphNoteCount < 32) {
+      self->insideParagraphNote = true;
+      self->paragraphNoteDepth = self->depth;
+      self->currentParagraphNoteId[0] = '\0';
+      self->currentParagraphNoteTextLen = 0;
+      self->currentParagraphNoteText[0] = '\0';
+
+      // Look for ID in nested <a> tags later or right here if available
+      for (int i = 0; atts[i]; i += 2) {
+        if (strcmp(atts[i], "id") == 0) {
+          strncpy(self->currentParagraphNoteId, atts[i + 1], 15);
+          self->currentParagraphNoteId[15] = '\0';
+        }
+      }
+    }
+  }
+
+  // Special handling for <a> with id inside a paragraph note if id not yet found
+  if (strcmp(name, "a") == 0 && self->insideParagraphNote && self->currentParagraphNoteId[0] == '\0' &&
+      atts != nullptr) {
+    for (int i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "id") == 0 || strcmp(atts[i], "name") == 0) {
+        strncpy(self->currentParagraphNoteId, atts[i + 1], 15);
+        self->currentParagraphNoteId[15] = '\0';
+        break;
+      }
+    }
   }
 
   // Special handling for tables - show placeholder text instead of dropping silently
@@ -144,6 +283,41 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
 void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char* s, const int len) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
+  // If we are collecting an inline footnote or paragraph note
+  if (self->insideAsideFootnote) {
+    int toCopy = std::min(len, MAX_ASIDE_BUFFER - self->currentAsideTextLen - 1);
+    if (toCopy > 0) {
+      memcpy(self->currentAsideText + self->currentAsideTextLen, s, toCopy);
+      self->currentAsideTextLen += toCopy;
+      self->currentAsideText[self->currentAsideTextLen] = '\0';
+    }
+    return;
+  }
+
+  if (self->insideParagraphNote) {
+    int toCopy = std::min(len, MAX_PNOTE_BUFFER - self->currentParagraphNoteTextLen - 1);
+    if (toCopy > 0) {
+      memcpy(self->currentParagraphNoteText + self->currentParagraphNoteTextLen, s, toCopy);
+      self->currentParagraphNoteTextLen += toCopy;
+      self->currentParagraphNoteText[self->currentParagraphNoteTextLen] = '\0';
+    }
+    // Also continue to process if not in Pass 1, so it appears in the text too
+  }
+
+  if (self->insideNoteref) {
+    int toCopy = std::min(len, 15 - self->currentNoterefTextLen);
+    if (toCopy > 0) {
+      memcpy(self->currentNoterefText + self->currentNoterefTextLen, s, toCopy);
+      self->currentNoterefTextLen += toCopy;
+      self->currentNoterefText[self->currentNoterefTextLen] = '\0';
+    }
+  }
+
+  // During pass 1, we only care about asides and paragraph notes
+  if (self->isPass1CollectingAsides) {
+    return;
+  }
+
   // Middle of skip
   if (self->skipUntilDepth < self->depth) {
     return;
@@ -209,6 +383,69 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
 void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* name) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
+  // Handle end of aside footnote
+  if (strcmp(name, "aside") == 0 && self->insideAsideFootnote && self->depth - 1 == self->asideDepth) {
+    if (self->currentAsideTextLen > 0 && self->currentAsideId[0] != '\0') {
+      self->inlineFootnotes.push_back({self->currentAsideId, self->currentAsideText});
+      self->inlineFootnoteCount++;
+    }
+    self->insideAsideFootnote = false;
+    self->depth -= 1;
+    return;
+  }
+
+  // Handle end of paragraph note
+  if (strcmp(name, "p") == 0 && self->insideParagraphNote && self->depth - 1 == self->paragraphNoteDepth) {
+    if (self->currentParagraphNoteTextLen > 0 && self->currentParagraphNoteId[0] != '\0') {
+      self->paragraphNotes.push_back({self->currentParagraphNoteId, self->currentParagraphNoteText});
+      self->paragraphNoteCount++;
+    }
+    self->insideParagraphNote = false;
+    self->depth -= 1;
+    return;
+  }
+
+  // During pass 1, skip all other processing
+  if (self->isPass1CollectingAsides) {
+    self->depth -= 1;
+    return;
+  }
+
+  // Handle end of noteref in pass 2
+  if (strcmp(name, "a") == 0 && self->insideNoteref) {
+    self->insideNoteref = false;
+    if (self->currentNoterefTextLen > 0) {
+      self->addFootnoteToCurrentPage(self->currentNoterefText, self->currentNoterefHref);
+      if (self->noterefCallback && self->currentFootnoteCount > 0) {
+        Noteref nr;
+        strncpy(nr.number, self->currentNoterefText, 15);
+        nr.number[15] = '\0';
+        strncpy(nr.href, self->currentFootnotes[self->currentFootnoteCount - 1].href, 127);
+        nr.href[127] = '\0';
+        self->noterefCallback(nr);
+      }
+      char formattedNoteref[32];
+      snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentNoterefText);
+      EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
+      if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
+        fontStyle = EpdFontFamily::BOLD_ITALIC;
+      } else if (self->boldUntilDepth < self->depth) {
+        fontStyle = EpdFontFamily::BOLD;
+      } else if (self->italicUntilDepth < self->depth) {
+        fontStyle = EpdFontFamily::ITALIC;
+      }
+      if (self->currentTextBlock) {
+        self->currentTextBlock->addWord(formattedNoteref, fontStyle);
+      }
+    }
+    self->currentNoterefTextLen = 0;
+    self->currentNoterefText[0] = '\0';
+    self->currentNoterefHrefLen = 0;
+    self->currentNoterefHref[0] = '\0';
+    self->depth -= 1;
+    return;
+  }
+
   if (self->partWordBufferIndex > 0) {
     // Only flush out part word buffer if we're closing a block tag or are at the top of the HTML file.
     // We don't want to flush out content when closing inline tags like <span>.
@@ -253,57 +490,104 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
 }
 
 bool ChapterHtmlSlimParser::parseAndBuildPages() {
-  startNewTextBlock((TextBlock::Style)this->paragraphAlignment);
+  // ============================================================================
+  // PASS 1: Extract all inline footnotes FIRST
+  // ============================================================================
+  Serial.printf("[%lu] [PARSER] === PASS 1: Extracting inline footnotes ===\n", millis());
 
-  const XML_Parser parser = XML_ParserCreate(nullptr);
-  int done;
+  // Reset state for pass 1
+  depth = 0;
+  skipUntilDepth = INT_MAX;
+  insideAsideFootnote = false;
+  insideParagraphNote = false;
+  inlineFootnoteCount = 0;
+  paragraphNoteCount = 0;
+  isPass1CollectingAsides = true;
 
-  if (!parser) {
+  XML_Parser parser1 = XML_ParserCreate(nullptr);
+  if (!parser1) {
     Serial.printf("[%lu] [EHP] Couldn't allocate memory for parser\n", millis());
     return false;
   }
 
-  FsFile file;
-  if (!SdMan.openFileForRead("EHP", filepath, file)) {
-    XML_ParserFree(parser);
+  FsFile file1;
+  if (!SdMan.openFileForRead("EHP", filepath, file1)) {
+    XML_ParserFree(parser1);
     return false;
   }
 
-  // Get file size for progress calculation
-  const size_t totalSize = file.size();
+  XML_SetUserData(parser1, this);
+  XML_SetElementHandler(parser1, startElement, endElement);
+  XML_SetCharacterDataHandler(parser1, characterData);
+
+  int done;
+  do {
+    void* const buf = XML_GetBuffer(parser1, 1024);
+    if (!buf) {
+      XML_ParserFree(parser1);
+      file1.close();
+      return false;
+    }
+    const size_t len = file1.read(buf, 1024);
+    done = file1.available() == 0;
+    if (XML_ParseBuffer(parser1, static_cast<int>(len), done) == XML_STATUS_ERROR) {
+      XML_ParserFree(parser1);
+      file1.close();
+      return false;
+    }
+  } while (!done);
+
+  XML_ParserFree(parser1);
+  file1.close();
+
+  // ============================================================================
+  // PASS 2: Build pages
+  // ============================================================================
+  Serial.printf("[%lu] [PARSER] === PASS 2: Building pages ===\n", millis());
+
+  // Reset state for pass 2
+  depth = 0;
+  skipUntilDepth = INT_MAX;
+  boldUntilDepth = INT_MAX;
+  italicUntilDepth = INT_MAX;
+  partWordBufferIndex = 0;
+  insideNoteref = false;
+  insideAsideFootnote = false;
+  currentFootnoteCount = 0;
+  isPass1CollectingAsides = false;
+
+  startNewTextBlock((TextBlock::Style)this->paragraphAlignment);
+
+  const XML_Parser parser2 = XML_ParserCreate(nullptr);
+  if (!parser2) {
+    Serial.printf("[%lu] [EHP] Couldn't allocate memory for parser\n", millis());
+    return false;
+  }
+
+  FsFile file2;
+  if (!SdMan.openFileForRead("EHP", filepath, file2)) {
+    XML_ParserFree(parser2);
+    return false;
+  }
+
+  const size_t totalSize = file2.size();
   size_t bytesRead = 0;
   int lastProgress = -1;
 
-  XML_SetUserData(parser, this);
-  XML_SetElementHandler(parser, startElement, endElement);
-  XML_SetCharacterDataHandler(parser, characterData);
+  XML_SetUserData(parser2, this);
+  XML_SetElementHandler(parser2, startElement, endElement);
+  XML_SetCharacterDataHandler(parser2, characterData);
 
   do {
-    void* const buf = XML_GetBuffer(parser, 1024);
+    void* const buf = XML_GetBuffer(parser2, 1024);
     if (!buf) {
-      Serial.printf("[%lu] [EHP] Couldn't allocate memory for buffer\n", millis());
-      XML_StopParser(parser, XML_FALSE);                // Stop any pending processing
-      XML_SetElementHandler(parser, nullptr, nullptr);  // Clear callbacks
-      XML_SetCharacterDataHandler(parser, nullptr);
-      XML_ParserFree(parser);
-      file.close();
+      XML_ParserFree(parser2);
+      file2.close();
       return false;
     }
 
-    const size_t len = file.read(buf, 1024);
+    const size_t len = file2.read(buf, 1024);
 
-    if (len == 0 && file.available() > 0) {
-      Serial.printf("[%lu] [EHP] File read error\n", millis());
-      XML_StopParser(parser, XML_FALSE);                // Stop any pending processing
-      XML_SetElementHandler(parser, nullptr, nullptr);  // Clear callbacks
-      XML_SetCharacterDataHandler(parser, nullptr);
-      XML_ParserFree(parser);
-      file.close();
-      return false;
-    }
-
-    // Update progress (call every 10% change to avoid too frequent updates)
-    // Only show progress for larger chapters where rendering overhead is worth it
     bytesRead += len;
     if (progressFn && totalSize >= MIN_SIZE_FOR_PROGRESS) {
       const int progress = static_cast<int>((bytesRead * 100) / totalSize);
@@ -313,29 +597,27 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
       }
     }
 
-    done = file.available() == 0;
+    done = file2.available() == 0;
 
-    if (XML_ParseBuffer(parser, static_cast<int>(len), done) == XML_STATUS_ERROR) {
-      Serial.printf("[%lu] [EHP] Parse error at line %lu:\n%s\n", millis(), XML_GetCurrentLineNumber(parser),
-                    XML_ErrorString(XML_GetErrorCode(parser)));
-      XML_StopParser(parser, XML_FALSE);                // Stop any pending processing
-      XML_SetElementHandler(parser, nullptr, nullptr);  // Clear callbacks
-      XML_SetCharacterDataHandler(parser, nullptr);
-      XML_ParserFree(parser);
-      file.close();
+    if (XML_ParseBuffer(parser2, static_cast<int>(len), done) == XML_STATUS_ERROR) {
+      XML_ParserFree(parser2);
+      file2.close();
       return false;
     }
   } while (!done);
 
-  XML_StopParser(parser, XML_FALSE);                // Stop any pending processing
-  XML_SetElementHandler(parser, nullptr, nullptr);  // Clear callbacks
-  XML_SetCharacterDataHandler(parser, nullptr);
-  XML_ParserFree(parser);
-  file.close();
+  XML_ParserFree(parser2);
+  file2.close();
 
   // Process last page if there is still text
   if (currentTextBlock) {
     makePages();
+    if (currentPage) {
+      for (int i = 0; i < currentFootnoteCount; i++) {
+        currentPage->footnotes.push_back(currentFootnotes[i]);
+      }
+      currentFootnoteCount = 0;
+    }
     completePageFn(std::move(currentPage));
     currentPage.reset();
     currentTextBlock.reset();
@@ -348,6 +630,12 @@ void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
 
   if (currentPageNextY + lineHeight > viewportHeight) {
+    if (currentPage) {
+      for (int i = 0; i < currentFootnoteCount; i++) {
+        currentPage->footnotes.push_back(currentFootnotes[i]);
+      }
+      currentFootnoteCount = 0;
+    }
     completePageFn(std::move(currentPage));
     currentPage.reset(new Page());
     currentPageNextY = 0;

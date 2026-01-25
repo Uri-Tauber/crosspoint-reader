@@ -3,12 +3,14 @@
 #include <SDCardManager.h>
 #include <Serialization.h>
 
+#include <set>
+
 #include "Page.h"
 #include "hyphenation/Hyphenator.h"
 #include "parsers/ChapterHtmlSlimParser.h"
 
 namespace {
-constexpr uint8_t SECTION_FILE_VERSION = 10;
+constexpr uint8_t SECTION_FILE_VERSION = 11;
 constexpr uint32_t HEADER_SIZE = sizeof(uint8_t) + sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(uint8_t) +
                                  sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(bool) +
                                  sizeof(uint32_t);
@@ -222,6 +224,64 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
   serialization::writePod(file, pageCount);
   serialization::writePod(file, lutOffset);
   file.close();
+
+  // Generate virtual HTML files for inline notes found by the parser
+  for (const auto& fn : visitor.inlineFootnotes) {
+    const char* id = fn.id.c_str();
+    const char* text = fn.text.c_str();
+    if (fn.text.empty()) continue;
+
+    char filename[64];
+    snprintf(filename, sizeof(filename), "inline_%s.html", id);
+    std::string fullPath = epub->getCachePath() + "/" + filename;
+
+    FsFile f;
+    if (SdMan.openFileForWrite("SCT", fullPath, f)) {
+      f.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+      f.println("<!DOCTYPE html>");
+      f.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+      f.println("<head><title>Footnote</title></head>");
+      f.println("<body>");
+      f.printf("<p id=\"%s\">%s</p>", id, text);
+      f.println("</body></html>");
+      f.close();
+
+      epub->addVirtualSpineItem(fullPath);
+      char href[128];
+      snprintf(href, sizeof(href), "%s#%s", filename, id);
+      epub->markAsFootnotePage(href);
+    }
+  }
+
+  for (const auto& fn : visitor.paragraphNotes) {
+    const char* id = fn.id.c_str();
+    const char* text = fn.text.c_str();
+    if (fn.text.empty()) continue;
+
+    char filename[64];
+    snprintf(filename, sizeof(filename), "pnote_%s.html", id);
+    std::string fullPath = epub->getCachePath() + "/" + filename;
+
+    FsFile f;
+    if (SdMan.openFileForWrite("SCT", fullPath, f)) {
+      f.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+      f.println("<!DOCTYPE html>");
+      f.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
+      f.println("<head><title>Note</title></head>");
+      f.println("<body>");
+      f.printf("<p id=\"%s\">%s</p>", id, text);
+      f.println("</body></html>");
+      f.close();
+
+      epub->addVirtualSpineItem(fullPath);
+      char href[128];
+      snprintf(href, sizeof(href), "%s#%s", filename, id);
+      epub->markAsFootnotePage(href);
+    }
+  }
+
+  epub->saveFootnoteMetadata();
+
   return true;
 }
 

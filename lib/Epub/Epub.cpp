@@ -213,6 +213,7 @@ bool Epub::load(const bool buildIfMissing) {
 
   // Try to load existing cache first
   if (bookMetadataCache->load()) {
+    loadFootnoteMetadata();
     Serial.printf("[%lu] [EBP] Loaded ePub: %s\n", millis(), filepath.c_str());
     return true;
   }
@@ -299,6 +300,8 @@ bool Epub::load(const bool buildIfMissing) {
     Serial.printf("[%lu] [EBP] Failed to reload cache after writing\n", millis());
     return false;
   }
+
+  loadFootnoteMetadata();
 
   Serial.printf("[%lu] [EBP] Loaded ePub: %s\n", millis(), filepath.c_str());
   return true;
@@ -519,7 +522,7 @@ int Epub::getSpineItemsCount() const {
   if (!bookMetadataCache || !bookMetadataCache->isLoaded()) {
     return 0;
   }
-  return bookMetadataCache->getSpineCount();
+  return bookMetadataCache->getSpineCount() + virtualSpineItems.size();
 }
 
 size_t Epub::getCumulativeSpineItemSize(const int spineIndex) const { return getSpineItem(spineIndex).cumulativeSize; }
@@ -530,12 +533,24 @@ BookMetadataCache::SpineEntry Epub::getSpineItem(const int spineIndex) const {
     return {};
   }
 
-  if (spineIndex < 0 || spineIndex >= bookMetadataCache->getSpineCount()) {
-    Serial.printf("[%lu] [EBP] getSpineItem index:%d is out of range\n", millis(), spineIndex);
-    return bookMetadataCache->getSpineEntry(0);
+  // Normal spine item
+  if (spineIndex >= 0 && spineIndex < bookMetadataCache->getSpineCount()) {
+    return bookMetadataCache->getSpineEntry(spineIndex);
   }
 
-  return bookMetadataCache->getSpineEntry(spineIndex);
+  // Virtual spine item
+  int virtualIndex = spineIndex - bookMetadataCache->getSpineCount();
+  if (virtualIndex >= 0 && virtualIndex < static_cast<int>(virtualSpineItems.size())) {
+    // Return a synthetic SpineEntry for virtual items
+    size_t lastCumulativeSize =
+        (bookMetadataCache->getSpineCount() > 0)
+            ? bookMetadataCache->getSpineEntry(bookMetadataCache->getSpineCount() - 1).cumulativeSize
+            : 0;
+    return BookMetadataCache::SpineEntry(virtualSpineItems[virtualIndex], lastCumulativeSize, -1);
+  }
+
+  Serial.printf("[%lu] [EBP] getSpineItem index:%d is out of range\n", millis(), spineIndex);
+  return bookMetadataCache->getSpineEntry(0);
 }
 
 BookMetadataCache::TocEntry Epub::getTocItem(const int tocIndex) const {
@@ -581,7 +596,133 @@ int Epub::getSpineIndexForTocIndex(const int tocIndex) const {
   return spineIndex;
 }
 
-int Epub::getTocIndexForSpineIndex(const int spineIndex) const { return getSpineItem(spineIndex).tocIndex; }
+int Epub::getTocIndexForSpineIndex(const int spineIndex) const {
+  if (shouldHideFromToc(spineIndex)) {
+    return -1;
+  }
+  return getSpineItem(spineIndex).tocIndex;
+}
+
+void Epub::markAsFootnotePage(const std::string& href) {
+  // Extract filename from href (remove #anchor if present)
+  size_t hashPos = href.find('#');
+  std::string filename = (hashPos != std::string::npos) ? href.substr(0, hashPos) : href;
+
+  // Extract just the filename without path
+  size_t lastSlash = filename.find_last_of('/');
+  if (lastSlash != std::string::npos) {
+    filename = filename.substr(lastSlash + 1);
+  }
+
+  footnotePages.insert(filename);
+  Serial.printf("[%lu] [EPUB] Marked as footnote page: %s\n", millis(), filename.c_str());
+}
+
+bool Epub::isFootnotePage(const std::string& filename) const {
+  return footnotePages.find(filename) != footnotePages.end();
+}
+
+bool Epub::shouldHideFromToc(int spineIndex) const {
+  // Always hide virtual spine items
+  if (isVirtualSpineItem(spineIndex)) {
+    return true;
+  }
+
+  if (!bookMetadataCache || !bookMetadataCache->isLoaded()) {
+    return false;
+  }
+
+  if (spineIndex < 0 || spineIndex >= bookMetadataCache->getSpineCount()) {
+    return true;
+  }
+
+  const std::string& spineItem = bookMetadataCache->getSpineEntry(spineIndex).href;
+
+  // Extract filename from spine item
+  size_t lastSlash = spineItem.find_last_of('/');
+  std::string filename = (lastSlash != std::string::npos) ? spineItem.substr(lastSlash + 1) : spineItem;
+
+  return isFootnotePage(filename);
+}
+
+int Epub::addVirtualSpineItem(const std::string& path) {
+  for (size_t i = 0; i < virtualSpineItems.size(); i++) {
+    if (virtualSpineItems[i] == path) {
+      return bookMetadataCache->getSpineCount() + i;
+    }
+  }
+
+  virtualSpineItems.push_back(path);
+  int newIndex = getSpineItemsCount() - 1;
+  Serial.printf("[%lu] [EPUB] Added virtual spine item: %s (index %d)\n", millis(), path.c_str(), newIndex);
+  return newIndex;
+}
+
+bool Epub::isVirtualSpineItem(int spineIndex) const {
+  if (!bookMetadataCache || !bookMetadataCache->isLoaded()) return false;
+  return spineIndex >= bookMetadataCache->getSpineCount();
+}
+
+int Epub::findVirtualSpineIndex(const std::string& filename) const {
+  for (size_t i = 0; i < virtualSpineItems.size(); i++) {
+    const std::string& virtualPath = virtualSpineItems[i];
+    size_t lastSlash = virtualPath.find_last_of('/');
+    std::string virtualFilename = (lastSlash != std::string::npos) ? virtualPath.substr(lastSlash + 1) : virtualPath;
+
+    if (virtualFilename == filename) {
+      return bookMetadataCache->getSpineCount() + i;
+    }
+  }
+  return -1;
+}
+
+bool Epub::loadFootnoteMetadata() {
+  const std::string path = cachePath + "/footnotes_meta.bin";
+  FsFile file;
+  if (!SdMan.openFileForRead("EPB", path, file)) {
+    return false;
+  }
+
+  uint32_t count;
+  serialization::readPod(file, count);
+  footnotePages.clear();
+  for (uint32_t i = 0; i < count; i++) {
+    std::string s;
+    serialization::readString(file, s);
+    footnotePages.insert(s);
+  }
+
+  serialization::readPod(file, count);
+  virtualSpineItems.clear();
+  for (uint32_t i = 0; i < count; i++) {
+    std::string s;
+    serialization::readString(file, s);
+    virtualSpineItems.push_back(s);
+  }
+
+  file.close();
+  return true;
+}
+
+void Epub::saveFootnoteMetadata() const {
+  const std::string path = cachePath + "/footnotes_meta.bin";
+  FsFile file;
+  if (!SdMan.openFileForWrite("EPB", path, file)) {
+    return;
+  }
+
+  serialization::writePod(file, static_cast<uint32_t>(footnotePages.size()));
+  for (const auto& s : footnotePages) {
+    serialization::writeString(file, s);
+  }
+
+  serialization::writePod(file, static_cast<uint32_t>(virtualSpineItems.size()));
+  for (const auto& s : virtualSpineItems) {
+    serialization::writeString(file, s);
+  }
+
+  file.close();
+}
 
 size_t Epub::getBookSize() const {
   if (!bookMetadataCache || !bookMetadataCache->isLoaded() || bookMetadataCache->getSpineCount() == 0) {

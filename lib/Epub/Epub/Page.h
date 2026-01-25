@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "FootnoteEntry.h"
 #include "blocks/TextBlock.h"
 
 enum PageElementTag : uint8_t {
@@ -37,6 +38,7 @@ class Page {
  public:
   // the list of block index and line numbers on this page
   std::vector<std::shared_ptr<PageElement>> elements;
+  std::vector<FootnoteEntry> footnotes;
   void render(GfxRenderer& renderer, int fontId, int xOffset, int yOffset) const;
   bool serialize(FsFile& file) const;
   static std::unique_ptr<Page> deserialize(FsFile& file);
