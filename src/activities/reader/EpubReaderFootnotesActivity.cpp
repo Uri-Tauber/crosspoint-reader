@@ -16,12 +16,12 @@ void EpubReaderFootnotesActivity::onExit() {
 }
 
 void EpubReaderFootnotesActivity::loop() {
-  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onGoBack();
     return;
   }
 
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     const FootnoteEntry* entry = footnotes.getEntry(selectedIndex);
     if (entry) {
       Serial.printf("[%lu] [FNS] Selected footnote: %s -> %s\n", millis(), entry->number, entry->href);

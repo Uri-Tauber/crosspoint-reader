@@ -44,9 +44,9 @@ void EpubReaderMenuActivity::loop() {
   const bool nextReleased =
       mappedInput.wasReleased(MappedInputManager::Button::Down) || mappedInput.wasReleased(MappedInputManager::Button::Right);
 
-  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     onSelectOption(static_cast<MenuOption>(selectorIndex));
-  } else if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+  } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onGoBack();
   } else if (prevReleased) {
     selectorIndex = (selectorIndex + MENU_ITEMS_COUNT - 1) % MENU_ITEMS_COUNT;
