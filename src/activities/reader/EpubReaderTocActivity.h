@@ -1,4 +1,5 @@
 #pragma once
+#include <Epub.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -7,8 +8,7 @@
 #include <vector>
 
 #include "../ActivityWithSubactivity.h"
-#include "ChaptersTab.h"
-#include "FootnotesTab.h"
+#include "FootnotesData.h"
 
 class EpubReaderTocActivity final : public ActivityWithSubactivity {
  public:
@@ -27,11 +27,16 @@ class EpubReaderTocActivity final : public ActivityWithSubactivity {
   int totalPagesInSpine = 0;
 
   Tab currentTab = Tab::CHAPTERS;
-  std::unique_ptr<ChaptersTab> chaptersTab;
-  std::unique_ptr<FootnotesTab> footnotesTab;
-
   bool updateRequired = false;
 
+  // Chapters tab state
+  int chaptersSelectorIndex = 0;
+  std::vector<int> filteredSpineIndices;
+
+  // Footnotes tab state
+  int footnotesSelectedIndex = 0;
+
+  // Callbacks
   const std::function<void()> onGoBack;
   const std::function<void(int newSpineIndex)> onSelectSpineIndex;
   const std::function<void(const char* href)> onSelectFootnote;
@@ -40,16 +45,33 @@ class EpubReaderTocActivity final : public ActivityWithSubactivity {
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void renderScreen();
-  TocTab* getCurrentTab() const;
+
+  // Tab-specific methods
+  void loopChapters();
+  void loopFootnotes();
+  void renderChapters(int contentTop, int contentHeight);
+  void renderFootnotes(int contentTop, int contentHeight);
+
+  // Chapters helpers
+  void buildFilteredChapterList();
+  bool hasSyncOption() const;
+  bool isSyncItem(int index) const;
+  int getChaptersTotalItems() const;
+  int getChaptersPageItems(int contentHeight) const;
+  int tocIndexFromItemIndex(int itemIndex) const;
+
+  // Indicator helpers
+  int getCurrentPage() const;
+  int getTotalPages() const;
 
  public:
-  EpubReaderTocActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, const std::shared_ptr<Epub>& epub,
+  EpubReaderTocActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, const std::shared_ptr<Epub>& epub_ptr,
                         const std::string& epubPath, int currentSpineIndex, int currentPage, int totalPagesInSpine,
                         const FootnotesData& footnotes, std::function<void()> onGoBack,
                         std::function<void(int)> onSelectSpineIndex, std::function<void(const char*)> onSelectFootnote,
                         std::function<void(int, int)> onSyncPosition)
       : ActivityWithSubactivity("EpubReaderToc", renderer, mappedInput),
-        epub(epub),
+        epub(epub_ptr),
         epubPath(epubPath),
         currentSpineIndex(currentSpineIndex),
         currentPage(currentPage),
@@ -58,14 +80,7 @@ class EpubReaderTocActivity final : public ActivityWithSubactivity {
         onGoBack(onGoBack),
         onSelectSpineIndex(onSelectSpineIndex),
         onSelectFootnote(onSelectFootnote),
-        onSyncPosition(onSyncPosition) {
-    chaptersTab = std::unique_ptr<ChaptersTab>(new ChaptersTab(
-        renderer, mappedInput, epub, currentSpineIndex,
-        [this](int spineIndex) { this->onSelectSpineIndex(spineIndex); },
-        [this]() { this->launchSyncActivity(); }));
-    footnotesTab = std::unique_ptr<FootnotesTab>(new FootnotesTab(
-        renderer, mappedInput, footnotes, [this](const char* href) { this->onSelectFootnote(href); }));
-  }
+        onSyncPosition(onSyncPosition) {}
 
   void onEnter() override;
   void onExit() override;

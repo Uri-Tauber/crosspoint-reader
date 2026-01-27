@@ -1,9 +1,6 @@
 #pragma once
 #include <cstring>
-#include <functional>
-
-#include "../../lib/Epub/Epub/FootnoteEntry.h"
-#include "TocTab.h"
+#include <Epub/FootnoteEntry.h>
 
 class FootnotesData {
  private:
@@ -44,26 +41,4 @@ class FootnotesData {
     }
     return nullptr;
   }
-};
-
-class FootnotesTab final : public TocTab {
-  const FootnotesData& footnotes;
-  int selectedIndex = 0;
-  bool updateRequired = false;
-
-  const std::function<void(const char* href)> onSelectFootnote;
-
- public:
-  FootnotesTab(GfxRenderer& renderer, MappedInputManager& mappedInput, const FootnotesData& footnotes,
-               std::function<void(const char*)> onSelectFootnote)
-      : TocTab(renderer, mappedInput), footnotes(footnotes), onSelectFootnote(onSelectFootnote) {}
-
-  void onEnter() override;
-  void loop() override;
-  void render(int contentTop, int contentHeight) override;
-
-  int getCurrentPage() const override;
-  int getTotalPages() const override;
-  bool isUpdateRequired() const override { return updateRequired; }
-  void clearUpdateRequired() override { updateRequired = false; }
 };
