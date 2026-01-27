@@ -108,6 +108,8 @@ class ChapterHtmlSlimParser {
 
   void addFootnoteToCurrentPage(const char* number, const char* href);
   void startNewTextBlock(TextBlock::Style style);
+  EpdFontFamily::Style getCurrentFontStyle() const;
+  void flushPartWordBuffer();
   void makePages();
 
   // XML callbacks

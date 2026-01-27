@@ -84,6 +84,26 @@ std::string replaceHtmlEntities(const char* text) {
   return s;
 }
 
+EpdFontFamily::Style ChapterHtmlSlimParser::getCurrentFontStyle() const {
+  if (boldUntilDepth < depth && italicUntilDepth < depth) {
+    return EpdFontFamily::BOLD_ITALIC;
+  } else if (boldUntilDepth < depth) {
+    return EpdFontFamily::BOLD;
+  } else if (italicUntilDepth < depth) {
+    return EpdFontFamily::ITALIC;
+  }
+  return EpdFontFamily::REGULAR;
+}
+
+// flush the contents of partWordBuffer to currentTextBlock
+void ChapterHtmlSlimParser::flushPartWordBuffer() {
+  EpdFontFamily::Style fontStyle = getCurrentFontStyle();
+  // flush the buffer
+  partWordBuffer[partWordBufferIndex] = '\0';
+  currentTextBlock->addWord(std::move(replaceHtmlEntities(partWordBuffer)), fontStyle);
+  partWordBufferIndex = 0;
+}
+
 // start a new text block if needed
 void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::Style style) {
   if (currentTextBlock) {
@@ -288,23 +308,12 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     if (self->anchorDepth != -1 && !self->insideNoteref) {
       Serial.printf("[%lu] [NOTEREF] Found <sup> inside <a>, promoting to noteref\n", millis());
 
-      // 1. Flush the current word buffer (text before the sup is normal text)
+      // Flush the current word buffer (text before the sup is normal text)
       if (self->partWordBufferIndex > 0) {
-        // Copy of the existing flush logic
-        EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-        if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth)
-          fontStyle = EpdFontFamily::BOLD_ITALIC;
-        else if (self->boldUntilDepth < self->depth)
-          fontStyle = EpdFontFamily::BOLD;
-        else if (self->italicUntilDepth < self->depth)
-          fontStyle = EpdFontFamily::ITALIC;
-
-        self->partWordBuffer[self->partWordBufferIndex] = '\0';
-        self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
-        self->partWordBufferIndex = 0;
+        self->flushPartWordBuffer();
       }
 
-      // 2. Activate footnote mode
+      // Activate footnote mode
       self->insideNoteref = true;
       self->currentNoterefTextLen = 0;
       self->currentNoterefText[0] = '\0';
@@ -346,23 +355,14 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
 
     if (isNoteref) {
-      // ... (Rest of original isNoteref logic) ...
       Serial.printf("[%lu] [NOTEREF] Found noteref: href=%s\n", millis(), href ? href : "null");
-
       // Flush word buffer
       if (self->partWordBufferIndex > 0) {
-        // ... (flush logic) ...
-        EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-        // ... calculate style ...
-        self->partWordBuffer[self->partWordBufferIndex] = '\0';
-        self->currentTextBlock->addWord(std::move(replaceHtmlEntities(self->partWordBuffer)), fontStyle);
-        self->partWordBufferIndex = 0;
+        self->flushPartWordBuffer();
       }
-
       self->insideNoteref = true;
       self->currentNoterefTextLen = 0;
       self->currentNoterefText[0] = '\0';
-
       self->depth += 1;
       return;
     }
@@ -412,7 +412,10 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     if (atts != nullptr) {
       for (int i = 0; atts[i]; i += 2) {
         if (strcmp(atts[i], "alt") == 0) {
-          alt = "[Image: " + std::string(atts[i + 1]) + "]";
+          // add " " (counts as whitespace) at the end of alt
+          //  so the corresponding text block ends.
+          // TODO: A zero-width breaking space would be more appropriate (once/if we support it)
+          alt = "[Image: " + std::string(atts[i + 1]) + "] ";
         }
       }
       Serial.printf("[%lu] [EHP] Image alt: %s\n", millis(), alt.c_str());
@@ -421,7 +424,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       self->italicUntilDepth = min(self->italicUntilDepth, self->depth);
       self->depth += 1;
       self->characterData(userData, alt.c_str(), alt.length());
-
+      return;
     } else {
       // Skip for now
       self->skipUntilDepth = self->depth;
@@ -453,6 +456,10 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
   } else if (matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS)) {
     if (strcmp(name, "br") == 0) {
+      if (self->partWordBufferIndex > 0) {
+        // flush word preceding <br/> to currentTextBlock before calling startNewTextBlock
+        self->flushPartWordBuffer();
+      }
       self->startNewTextBlock(self->currentTextBlock->getStyle());
     } else {
       self->startNewTextBlock((TextBlock::Style)self->paragraphAlignment);
@@ -550,30 +557,17 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     return;
   }
 
-  EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-  if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-    fontStyle = EpdFontFamily::BOLD_ITALIC;
-  } else if (self->boldUntilDepth < self->depth) {
-    fontStyle = EpdFontFamily::BOLD;
-  } else if (self->italicUntilDepth < self->depth) {
-    fontStyle = EpdFontFamily::ITALIC;
-  }
-
   for (int i = 0; i < len; i++) {
     if (isWhitespace(s[i])) {
       if (self->partWordBufferIndex > 0) {
-        self->partWordBuffer[self->partWordBufferIndex] = '\0';
-        self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
-        self->partWordBufferIndex = 0;
+        self->flushPartWordBuffer();
       }
       continue;
     }
 
     // If we're about to run out of space, then cut the word off and start a new one
     if (self->partWordBufferIndex >= MAX_WORD_SIZE) {
-      self->partWordBuffer[self->partWordBufferIndex] = '\0';
-      self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
-      self->partWordBufferIndex = 0;
+      self->flushPartWordBuffer();
     }
 
     // Skip Zero Width No-Break Space / BOM (U+FEFF) = 0xEF 0xBB 0xBF
@@ -590,9 +584,7 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
       }
     }
     if (self->partWordBufferIndex >= MAX_WORD_SIZE) {
-      self->partWordBuffer[self->partWordBufferIndex] = '\0';
-      self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
-      self->partWordBufferIndex = 0;
+      self->flushPartWordBuffer();
     }
 
     self->partWordBuffer[self->partWordBufferIndex++] = s[i];
@@ -719,14 +711,7 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         }
 
         // Ensure [1] appears inline after the word it references
-        EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-        if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-          fontStyle = EpdFontFamily::BOLD_ITALIC;
-        } else if (self->boldUntilDepth < self->depth) {
-          fontStyle = EpdFontFamily::BOLD;
-        } else if (self->italicUntilDepth < self->depth) {
-          fontStyle = EpdFontFamily::ITALIC;
-        }
+        EpdFontFamily::Style fontStyle = self->getCurrentFontStyle();
 
         // Format the noteref text with brackets
         char formattedNoteref[32];
@@ -764,18 +749,7 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         matches(name, BOLD_TAGS, NUM_BOLD_TAGS) || matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) || self->depth == 1;
 
     if (shouldBreakText) {
-      EpdFontFamily::Style fontStyle = EpdFontFamily::REGULAR;
-      if (self->boldUntilDepth < self->depth && self->italicUntilDepth < self->depth) {
-        fontStyle = EpdFontFamily::BOLD_ITALIC;
-      } else if (self->boldUntilDepth < self->depth) {
-        fontStyle = EpdFontFamily::BOLD;
-      } else if (self->italicUntilDepth < self->depth) {
-        fontStyle = EpdFontFamily::ITALIC;
-      }
-
-      self->partWordBuffer[self->partWordBufferIndex] = '\0';
-      self->currentTextBlock->addWord(self->partWordBuffer, fontStyle);
-      self->partWordBufferIndex = 0;
+      self->flushPartWordBuffer();
     }
   }
 

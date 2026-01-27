@@ -20,6 +20,8 @@ namespace {
 constexpr unsigned long skipChapterMs = 700;
 constexpr unsigned long goHomeMs = 1000;
 constexpr int statusBarMargin = 19;
+constexpr int progressBarMarginTop = 1;
+
 }  // namespace
 
 void EpubReaderActivity::taskTrampoline(void* param) {
@@ -57,11 +59,16 @@ void EpubReaderActivity::onEnter() {
 
   FsFile f;
   if (SdMan.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[4];
-    if (f.read(data, 4) == 4) {
+    uint8_t data[6];
+    int dataSize = f.read(data, 6);
+    if (dataSize == 4 || dataSize == 6) {
       currentSpineIndex = data[0] + (data[1] << 8);
       nextPageNumber = data[2] + (data[3] << 8);
+      cachedSpineIndex = currentSpineIndex;
       Serial.printf("[%lu] [ERS] Loaded cache: %d, %d\n", millis(), currentSpineIndex, nextPageNumber);
+    }
+    if (dataSize == 6) {
+      cachedChapterTotalPageCount = data[4] + (data[5] << 8);
     }
     f.close();
   }
@@ -205,14 +212,21 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  const bool prevReleased = mappedInput.wasReleased(MappedInputManager::Button::PageBack) ||
-                            mappedInput.wasReleased(MappedInputManager::Button::Left);
-  const bool nextReleased = mappedInput.wasReleased(MappedInputManager::Button::PageForward) ||
-                            (SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::PAGE_TURN &&
-                             mappedInput.wasReleased(MappedInputManager::Button::Power)) ||
-                            mappedInput.wasReleased(MappedInputManager::Button::Right);
+  // When long-press chapter skip is disabled, turn pages on press instead of release.
+  const bool usePressForPageTurn = !SETTINGS.longPressChapterSkip;
+  const bool prevTriggered = usePressForPageTurn ? (mappedInput.wasPressed(MappedInputManager::Button::PageBack) ||
+                                                    mappedInput.wasPressed(MappedInputManager::Button::Left))
+                                                 : (mappedInput.wasReleased(MappedInputManager::Button::PageBack) ||
+                                                    mappedInput.wasReleased(MappedInputManager::Button::Left));
+  const bool powerPageTurn = SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::PAGE_TURN &&
+                             mappedInput.wasReleased(MappedInputManager::Button::Power);
+  const bool nextTriggered = usePressForPageTurn
+                                 ? (mappedInput.wasPressed(MappedInputManager::Button::PageForward) || powerPageTurn ||
+                                    mappedInput.wasPressed(MappedInputManager::Button::Right))
+                                 : (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || powerPageTurn ||
+                                    mappedInput.wasReleased(MappedInputManager::Button::Right));
 
-  if (!prevReleased && !nextReleased) {
+  if (!prevTriggered && !nextTriggered) {
     return;
   }
 
@@ -230,7 +244,7 @@ void EpubReaderActivity::loop() {
     // We don't want to delete the section mid-render, so grab the semaphore
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     nextPageNumber = 0;
-    currentSpineIndex = nextReleased ? currentSpineIndex + 1 : currentSpineIndex - 1;
+    currentSpineIndex = nextTriggered ? currentSpineIndex + 1 : currentSpineIndex - 1;
     section.reset();
     xSemaphoreGive(renderingMutex);
     updateRequired = true;
@@ -243,7 +257,7 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  if (prevReleased) {
+  if (prevTriggered) {
     if (section->currentPage > 0) {
       section->currentPage--;
     } else {
@@ -311,7 +325,16 @@ void EpubReaderActivity::renderScreen() {
   orientedMarginTop += SETTINGS.screenMargin;
   orientedMarginLeft += SETTINGS.screenMargin;
   orientedMarginRight += SETTINGS.screenMargin;
-  orientedMarginBottom += statusBarMargin;
+  orientedMarginBottom += SETTINGS.screenMargin;
+
+  // Add status bar margin
+  if (SETTINGS.statusBar != CrossPointSettings::STATUS_BAR_MODE::NONE) {
+    // Add additional margin for status bar if progress bar is shown
+    const bool showProgressBar = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR ||
+                                 SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_PROGRESS_BAR;
+    orientedMarginBottom += statusBarMargin - SETTINGS.screenMargin +
+                            (showProgressBar ? (ScreenComponents::BOOK_PROGRESS_BAR_HEIGHT + progressBarMarginTop) : 0);
+  }
 
   if (!section) {
     const auto filepath = epub->getSpineItem(currentSpineIndex).href;
@@ -382,6 +405,17 @@ void EpubReaderActivity::renderScreen() {
     } else {
       section->currentPage = nextPageNumber;
     }
+
+    // handles changes in reader settings and reset to approximate position based on cached progress
+    if (cachedChapterTotalPageCount > 0) {
+      // only goes to relative position if spine index matches cached value
+      if (currentSpineIndex == cachedSpineIndex && section->pageCount != cachedChapterTotalPageCount) {
+        float progress = static_cast<float>(section->currentPage) / static_cast<float>(cachedChapterTotalPageCount);
+        int newPage = static_cast<int>(progress * section->pageCount);
+        section->currentPage = newPage;
+      }
+      cachedChapterTotalPageCount = 0;  // resets to 0 to prevent reading cached progress again
+    }
   }
 
   renderer.clearScreen();
@@ -433,12 +467,14 @@ void EpubReaderActivity::renderScreen() {
 
   FsFile f;
   if (SdMan.openFileForWrite("ERS", epub->getCachePath() + "/progress.bin", f)) {
-    uint8_t data[4];
+    uint8_t data[6];
     data[0] = currentSpineIndex & 0xFF;
     data[1] = (currentSpineIndex >> 8) & 0xFF;
     data[2] = section->currentPage & 0xFF;
     data[3] = (section->currentPage >> 8) & 0xFF;
-    f.write(data, 4);
+    data[4] = section->pageCount & 0xFF;
+    data[5] = (section->pageCount >> 8) & 0xFF;
+    f.write(data, 6);
     f.close();
   }
 }
@@ -485,29 +521,51 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
 void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const int orientedMarginBottom,
                                          const int orientedMarginLeft) const {
   // determine visible status bar elements
-  const bool showProgress = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+  const bool showProgressPercentage = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+  const bool showProgressBar = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR ||
+                               SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_PROGRESS_BAR;
+  const bool showProgressText = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL ||
+                                SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR;
   const bool showBattery = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::NO_PROGRESS ||
-                           SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+                           SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL ||
+                           SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR;
   const bool showChapterTitle = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::NO_PROGRESS ||
-                                SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
+                                SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL ||
+                                SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR;
   const bool showBatteryPercentage =
       SETTINGS.hideBatteryPercentage == CrossPointSettings::HIDE_BATTERY_PERCENTAGE::HIDE_NEVER;
 
   // Position status bar near the bottom of the logical screen, regardless of orientation
   const auto screenHeight = renderer.getScreenHeight();
   const auto textY = screenHeight - orientedMarginBottom - 4;
+  int progressTextWidth = 0;
 
-  if (showProgress) {
-    // Calculate progress in book
-    // TODO: use progress values for UI
+  // Calculate progress in book
+  const float sectionChapterProg = static_cast<float>(section->currentPage) / section->pageCount;
+  const float bookProgress = epub->calculateProgress(currentSpineIndex, sectionChapterProg) * 100;
 
-    // cppcheck-suppress unreadVariable
-    const float sectionChapterProg = static_cast<float>(section->currentPage) / section->pageCount;
-    // cppcheck-suppress unreadVariable
-    const float bookProgress = epub->calculateProgress(currentSpineIndex, sectionChapterProg) * 100;
+  if (showProgressText || showProgressPercentage) {
+    // Right aligned text for progress counter
+    char progressStr[32];
+
+    // Hide percentage when progress bar is shown to reduce clutter
+    if (showProgressPercentage) {
+      snprintf(progressStr, sizeof(progressStr), "%d/%d  %.0f%%", section->currentPage + 1, section->pageCount,
+               bookProgress);
+    } else {
+      snprintf(progressStr, sizeof(progressStr), "%d/%d", section->currentPage + 1, section->pageCount);
+    }
+
+    progressTextWidth = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
+    renderer.drawText(SMALL_FONT_ID, renderer.getScreenWidth() - orientedMarginRight - progressTextWidth, textY,
+                      progressStr);
   }
 
-  // Left aligned battery icon and percentage
+  if (showProgressBar) {
+    // Draw progress bar at the very bottom of the screen, from edge to edge of viewable area
+    ScreenComponents::drawBookProgressBar(renderer, static_cast<size_t>(bookProgress));
+  }
+
   if (showBattery) {
     ScreenComponents::drawBattery(renderer, orientedMarginLeft + 1, textY, showBatteryPercentage);
   }
@@ -517,7 +575,6 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
     // Page width minus existing content with 30px padding on each side
     const int rendererableScreenWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
 
-    int progressTextWidth = 0;
     const int batterySize = showBattery ? (showBatteryPercentage ? 50 : 20) : 0;
     const int titleMarginLeft = batterySize + 30;
     const int titleMarginRight = progressTextWidth + 30;
