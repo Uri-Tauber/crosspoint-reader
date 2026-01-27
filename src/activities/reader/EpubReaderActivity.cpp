@@ -7,9 +7,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "EpubReaderChapterSelectionActivity.h"
-#include "EpubReaderFootnotesActivity.h"
-#include "EpubReaderMenuActivity.h"
+#include "EpubReaderNavigationActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -124,72 +122,47 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // Enter chapter selection activity or menu
+  // Enter navigation activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Don't start activity transition while rendering
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
 
-    // Show menu instead of direct chapter selection, to allow access to footnotes
     exitActivity();
-    enterNewActivity(new EpubReaderMenuActivity(
-        this->renderer, this->mappedInput,
+    enterNewActivity(new EpubReaderNavigationActivity(
+        this->renderer, this->mappedInput, epub, epub->getPath(), currentPageFootnotes, currentSpineIndex,
+        currentPage, totalPages,
         [this] {
-          // onGoBack from menu
-          updateRequired = true;
-          // Re-enter reader activity logic if needed (handled by stack)
-          // Actually ActivityWithSubactivity handles subActivity exit naturally
+          // onGoBack
           exitActivity();
+          updateRequired = true;
         },
-        [this, currentPage, totalPages](EpubReaderMenuActivity::MenuOption option) {
-          // onSelectOption - handle menu choice
-          if (option == EpubReaderMenuActivity::CHAPTERS) {
-            // Show chapter selection
-            exitActivity();
-            enterNewActivity(new EpubReaderChapterSelectionActivity(
-                this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
-                [this] {
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](int newSpineIndex) {
-                  if (currentSpineIndex != newSpineIndex) {
-                    currentSpineIndex = newSpineIndex;
-                    nextPageNumber = 0;
-                    section.reset();
-                  }
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](int newSpineIndex, int newPage) {
-                  // Handle sync position
-                  if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
-                    currentSpineIndex = newSpineIndex;
-                    nextPageNumber = newPage;
-                    section.reset();
-                  }
-                  exitActivity();
-                  updateRequired = true;
-                }));
-          } else if (option == EpubReaderMenuActivity::FOOTNOTES) {
-            // Show footnotes page with current page notes
-            exitActivity();
-            enterNewActivity(new EpubReaderFootnotesActivity(
-                this->renderer, this->mappedInput,
-                currentPageFootnotes,  // Pass collected footnotes (reference)
-                [this] {
-                  // onGoBack from footnotes
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](const char* href) {
-                  // onSelectFootnote - navigate to the footnote location
-                  navigateToHref(href, true);  // true = save current position
-                  exitActivity();
-                  updateRequired = true;
-                }));
+        [this](int newSpineIndex) {
+          // onSelectSpineIndex
+          if (currentSpineIndex != newSpineIndex) {
+            currentSpineIndex = newSpineIndex;
+            nextPageNumber = 0;
+            section.reset();
           }
+          exitActivity();
+          updateRequired = true;
+        },
+        [this](int newSpineIndex, int newPage) {
+          // onSyncPosition
+          if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
+            currentSpineIndex = newSpineIndex;
+            nextPageNumber = newPage;
+            section.reset();
+          }
+          exitActivity();
+          updateRequired = true;
+        },
+        [this](const char* href) {
+          // onSelectFootnote
+          navigateToHref(href, true);  // true = save current position
+          exitActivity();
+          updateRequired = true;
         }));
     xSemaphoreGive(renderingMutex);
   }
