@@ -1,10 +1,9 @@
 #pragma once
 #include <cstring>
 #include <functional>
-#include <memory>
 
 #include "../../lib/Epub/Epub/FootnoteEntry.h"
-#include "../Activity.h"
+#include "TocTab.h"
 
 class FootnotesData {
  private:
@@ -47,26 +46,24 @@ class FootnotesData {
   }
 };
 
-class EpubReaderFootnotesActivity final : public Activity {
+class FootnotesTab final : public TocTab {
   const FootnotesData& footnotes;
-  const std::function<void()> onGoBack;
-  const std::function<void(const char*)> onSelectFootnote;
-  int selectedIndex;
+  int selectedIndex = 0;
+  bool updateRequired = false;
+
+  const std::function<void(const char* href)> onSelectFootnote;
 
  public:
-  EpubReaderFootnotesActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, const FootnotesData& footnotes,
-                              const std::function<void()>& onGoBack,
-                              const std::function<void(const char*)>& onSelectFootnote)
-      : Activity("EpubReaderFootnotes", renderer, mappedInput),
-        footnotes(footnotes),
-        onGoBack(onGoBack),
-        onSelectFootnote(onSelectFootnote),
-        selectedIndex(0) {}
+  FootnotesTab(GfxRenderer& renderer, MappedInputManager& mappedInput, const FootnotesData& footnotes,
+               std::function<void(const char*)> onSelectFootnote)
+      : TocTab(renderer, mappedInput), footnotes(footnotes), onSelectFootnote(onSelectFootnote) {}
 
   void onEnter() override;
-  void onExit() override;
   void loop() override;
+  void render(int contentTop, int contentHeight) override;
 
- private:
-  void render();
+  int getCurrentPage() const override;
+  int getTotalPages() const override;
+  bool isUpdateRequired() const override { return updateRequired; }
+  void clearUpdateRequired() override { updateRequired = false; }
 };
