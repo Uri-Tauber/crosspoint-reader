@@ -7,9 +7,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "EpubReaderChapterSelectionActivity.h"
-#include "EpubReaderFootnotesActivity.h"
-#include "EpubReaderMenuActivity.h"
+#include "EpubReaderTocActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -86,7 +84,7 @@ void EpubReaderActivity::onEnter() {
   // Save current epub as last opened epub and add to recent books
   APP_STATE.openEpubPath = epub->getPath();
   APP_STATE.saveToFile();
-  RECENT_BOOKS.addBook(epub->getPath());
+  RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor());
 
   // Trigger first update
   updateRequired = true;
@@ -131,65 +129,41 @@ void EpubReaderActivity::loop() {
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
 
-    // Show menu instead of direct chapter selection, to allow access to footnotes
+    // Show consolidated TOC activity (Chapters and Footnotes)
     exitActivity();
-    enterNewActivity(new EpubReaderMenuActivity(
-        this->renderer, this->mappedInput,
+    enterNewActivity(new EpubReaderTocActivity(
+        this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
+        currentPageFootnotes,
         [this] {
-          // onGoBack from menu
-          updateRequired = true;
-          // Re-enter reader activity logic if needed (handled by stack)
-          // Actually ActivityWithSubactivity handles subActivity exit naturally
+          // onGoBack
           exitActivity();
+          updateRequired = true;
         },
-        [this, currentPage, totalPages](EpubReaderMenuActivity::MenuOption option) {
-          // onSelectOption - handle menu choice
-          if (option == EpubReaderMenuActivity::CHAPTERS) {
-            // Show chapter selection
-            exitActivity();
-            enterNewActivity(new EpubReaderChapterSelectionActivity(
-                this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
-                [this] {
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](int newSpineIndex) {
-                  if (currentSpineIndex != newSpineIndex) {
-                    currentSpineIndex = newSpineIndex;
-                    nextPageNumber = 0;
-                    section.reset();
-                  }
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](int newSpineIndex, int newPage) {
-                  // Handle sync position
-                  if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
-                    currentSpineIndex = newSpineIndex;
-                    nextPageNumber = newPage;
-                    section.reset();
-                  }
-                  exitActivity();
-                  updateRequired = true;
-                }));
-          } else if (option == EpubReaderMenuActivity::FOOTNOTES) {
-            // Show footnotes page with current page notes
-            exitActivity();
-            enterNewActivity(new EpubReaderFootnotesActivity(
-                this->renderer, this->mappedInput,
-                currentPageFootnotes,  // Pass collected footnotes (reference)
-                [this] {
-                  // onGoBack from footnotes
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](const char* href) {
-                  // onSelectFootnote - navigate to the footnote location
-                  navigateToHref(href, true);  // true = save current position
-                  exitActivity();
-                  updateRequired = true;
-                }));
+        [this](int newSpineIndex) {
+          // onSelectSpineIndex
+          if (currentSpineIndex != newSpineIndex) {
+            currentSpineIndex = newSpineIndex;
+            nextPageNumber = 0;
+            section.reset();
           }
+          exitActivity();
+          updateRequired = true;
+        },
+        [this](const char* href) {
+          // onSelectFootnote
+          navigateToHref(href, true);
+          exitActivity();
+          updateRequired = true;
+        },
+        [this](int newSpineIndex, int newPage) {
+          // onSyncPosition
+          if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
+            currentSpineIndex = newSpineIndex;
+            nextPageNumber = newPage;
+            section.reset();
+          }
+          exitActivity();
+          updateRequired = true;
         }));
     xSemaphoreGive(renderingMutex);
   }
@@ -386,7 +360,7 @@ void EpubReaderActivity::renderScreen() {
       auto progressCallback = [this, barX, barY, barWidth, barHeight](int progress) {
         const int fillWidth = (barWidth - 2) * progress / 100;
         renderer.fillRect(barX + 1, barY + 1, fillWidth, barHeight - 2, true);
-        renderer.displayBuffer(EInkDisplay::FAST_REFRESH);
+        renderer.displayBuffer(HalDisplay::FAST_REFRESH);
       };
 
       if (!section->createSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
@@ -485,7 +459,7 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
   page->render(renderer, SETTINGS.getReaderFontId(), orientedMarginLeft, orientedMarginTop);
   renderStatusBar(orientedMarginRight, orientedMarginBottom, orientedMarginLeft);
   if (pagesUntilFullRefresh <= 1) {
-    renderer.displayBuffer(EInkDisplay::HALF_REFRESH);
+    renderer.displayBuffer(HalDisplay::HALF_REFRESH);
     pagesUntilFullRefresh = SETTINGS.getRefreshFrequency();
   } else {
     renderer.displayBuffer();
