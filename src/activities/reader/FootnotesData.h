@@ -1,6 +1,6 @@
 #pragma once
+#include <Epub/FootnoteEntry.h>
 #include <cstring>
-#include "../../../lib/Epub/Epub/FootnoteEntry.h"
 
 class FootnotesData {
  private:

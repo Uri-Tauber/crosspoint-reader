@@ -299,15 +299,22 @@ void EpubReaderNavigationActivity::renderChaptersTab() const {
     if (isSyncItem(itemIndex)) {
       renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, displayY, ">> Sync Progress", !isSelected);
     } else {
-      const int tocIndex = tocIndexFromItemIndex(itemIndex);
-      if (tocIndex == -1) {
-        renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, displayY, "Unnamed", !isSelected);
-      } else {
-        auto item = epub->getTocItem(tocIndex);
-        const int indentSize = LEFT_MARGIN + (item.level - 1) * 15;
-        const std::string chapterName =
-            renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - RIGHT_MARGIN - indentSize);
-        renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
+      int filteredIndex = itemIndex;
+      if (hasSyncOption()) filteredIndex -= 1;
+
+      if (filteredIndex >= 0 && filteredIndex < static_cast<int>(filteredSpineIndices.size())) {
+        const int spineIndex = filteredSpineIndices[filteredIndex];
+        const int tocIndex = epub->getTocIndexForSpineIndex(spineIndex);
+
+        if (tocIndex == -1) {
+          renderer.drawText(UI_10_FONT_ID, LEFT_MARGIN, displayY, "Unnamed", !isSelected);
+        } else {
+          auto item = epub->getTocItem(tocIndex);
+          const int indentSize = LEFT_MARGIN + (item.level - 1) * 15;
+          const std::string chapterName =
+              renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - RIGHT_MARGIN - indentSize);
+          renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
+        }
       }
     }
   }
