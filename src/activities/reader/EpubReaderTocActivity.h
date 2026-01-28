@@ -31,7 +31,6 @@ class EpubReaderTocActivity final : public ActivityWithSubactivity {
 
   // Chapters tab state
   int chaptersSelectorIndex = 0;
-  std::vector<int> filteredSpineIndices;
 
   // Footnotes tab state
   int footnotesSelectedIndex = 0;
@@ -53,7 +52,6 @@ class EpubReaderTocActivity final : public ActivityWithSubactivity {
   void renderFootnotes(int contentTop, int contentHeight);
 
   // Chapters helpers
-  void buildFilteredChapterList();
   bool hasSyncOption() const;
   bool isSyncItem(int index) const;
   int getChaptersTotalItems() const;

@@ -27,13 +27,9 @@ void EpubReaderTocActivity::onEnter() {
   renderingMutex = xSemaphoreCreateMutex();
 
   // Init chapters state
-  buildFilteredChapterList();
-  chaptersSelectorIndex = 0;
-  for (size_t i = 0; i < filteredSpineIndices.size(); i++) {
-    if (filteredSpineIndices[i] == currentSpineIndex) {
-      chaptersSelectorIndex = i;
-      break;
-    }
+  chaptersSelectorIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
+  if (chaptersSelectorIndex == -1) {
+    chaptersSelectorIndex = 0;
   }
   if (hasSyncOption()) {
     chaptersSelectorIndex += 1;
@@ -110,6 +106,7 @@ void EpubReaderTocActivity::loopChapters() {
   const bool downReleased = mappedInput.wasReleased(MappedInputManager::Button::Down);
   const bool skipPage = mappedInput.getHeldTime() > SKIP_PAGE_MS;
   const int totalItems = getChaptersTotalItems();
+  const int pageItems = getChaptersPageItems(renderer.getScreenHeight() - CONTENT_START_Y - 60);
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (isSyncItem(chaptersSelectorIndex)) {
@@ -117,29 +114,32 @@ void EpubReaderTocActivity::loopChapters() {
       return;
     }
 
-    int filteredIndex = chaptersSelectorIndex;
+    const int tocIndex = tocIndexFromItemIndex(chaptersSelectorIndex);
+    const int newSpineIndex = epub->getSpineIndexForTocIndex(tocIndex);
 
-    if (hasSyncOption() && chaptersSelectorIndex > 0) filteredIndex -= 1;
-
-    if (filteredIndex >= 0 && filteredIndex < static_cast<int>(filteredSpineIndices.size())) {
-      onSelectSpineIndex(filteredSpineIndices[filteredIndex]);
+    if (newSpineIndex == -1) {
+      onGoBack();
+    } else {
+      onSelectSpineIndex(newSpineIndex);
     }
   } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
     onGoBack();
   } else if (upReleased) {
     if (totalItems > 0) {
       if (skipPage) {
-        // TODO: implement page-skip navigation once page size is available
+        chaptersSelectorIndex = ((chaptersSelectorIndex / pageItems - 1) * pageItems + totalItems) % totalItems;
+      } else {
+        chaptersSelectorIndex = (chaptersSelectorIndex + totalItems - 1) % totalItems;
       }
-      chaptersSelectorIndex = (chaptersSelectorIndex + totalItems - 1) % totalItems;
       updateRequired = true;
     }
   } else if (downReleased) {
     if (totalItems > 0) {
       if (skipPage) {
-        // TODO: implement page-skip navigation once page size is available
+        chaptersSelectorIndex = ((chaptersSelectorIndex / pageItems + 1) * pageItems) % totalItems;
+      } else {
+        chaptersSelectorIndex = (chaptersSelectorIndex + 1) % totalItems;
       }
-      chaptersSelectorIndex = (chaptersSelectorIndex + 1) % totalItems;
       updateRequired = true;
     }
   }
@@ -147,13 +147,13 @@ void EpubReaderTocActivity::loopChapters() {
 
 void EpubReaderTocActivity::loopFootnotes() {
   bool needsRedraw = false;
-  if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Up)) {
     if (footnotesSelectedIndex > 0) {
       footnotesSelectedIndex--;
       needsRedraw = true;
     }
   }
-  if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Down)) {
     if (footnotesSelectedIndex < footnotes.getCount() - 1) {
       footnotesSelectedIndex++;
       needsRedraw = true;
@@ -225,22 +225,13 @@ void EpubReaderTocActivity::renderChapters(int contentTop, int contentHeight) {
     if (isSyncItem(itemIndex)) {
       renderer.drawText(UI_10_FONT_ID, 20, displayY, ">> Sync Progress", !isSelected);
     } else {
-      int filteredIndex = itemIndex;
-      if (hasSyncOption()) filteredIndex -= 1;
+      const int tocIndex = tocIndexFromItemIndex(itemIndex);
+      auto item = epub->getTocItem(tocIndex);
 
-      if (filteredIndex >= 0 && filteredIndex < static_cast<int>(filteredSpineIndices.size())) {
-        int spineIndex = filteredSpineIndices[filteredIndex];
-        int tocIndex = this->epub->getTocIndexForSpineIndex(spineIndex);
-        if (tocIndex == -1) {
-          renderer.drawText(UI_10_FONT_ID, 20, displayY, "Unnamed", !isSelected);
-        } else {
-          auto item = this->epub->getTocItem(tocIndex);
-          const int indentSize = 20 + (item.level - 1) * 15;
-          const std::string chapterName =
-              renderer.truncatedText(UI_10_FONT_ID, item.title.c_str(), pageWidth - 40 - indentSize);
-          renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
-        }
-      }
+      const int indentSize = 20 + (item.level > 0 ? item.level - 1 : 0) * 15;
+      const char* title = item.title.empty() ? "Unnamed" : item.title.c_str();
+      const std::string chapterName = renderer.truncatedText(UI_10_FONT_ID, title, pageWidth - 40 - indentSize);
+      renderer.drawText(UI_10_FONT_ID, indentSize, displayY, chapterName.c_str(), !isSelected);
     }
   }
 }
@@ -264,16 +255,6 @@ void EpubReaderTocActivity::renderFootnotes(int contentTop, int contentHeight) {
   }
 }
 
-void EpubReaderTocActivity::buildFilteredChapterList() {
-  filteredSpineIndices.clear();
-  for (int i = 0; i < this->epub->getSpineItemsCount(); i++) {
-    if (this->epub->shouldHideFromToc(i)) continue;
-    int tocIndex = this->epub->getTocIndexForSpineIndex(i);
-    if (tocIndex == -1) continue;
-    filteredSpineIndices.push_back(i);
-  }
-}
-
 bool EpubReaderTocActivity::hasSyncOption() const { return KOREADER_STORE.hasCredentials(); }
 
 bool EpubReaderTocActivity::isSyncItem(int index) const {
@@ -281,9 +262,14 @@ bool EpubReaderTocActivity::isSyncItem(int index) const {
   return index == 0 || index == getChaptersTotalItems() - 1;
 }
 
+int EpubReaderTocActivity::tocIndexFromItemIndex(int itemIndex) const {
+  const int offset = hasSyncOption() ? 1 : 0;
+  return itemIndex - offset;
+}
+
 int EpubReaderTocActivity::getChaptersTotalItems() const {
   const int syncCount = hasSyncOption() ? 2 : 0;
-  return filteredSpineIndices.size() + syncCount;
+  return epub->getTocItemsCount() + syncCount;
 }
 
 int EpubReaderTocActivity::getChaptersPageItems(int contentHeight) const {
