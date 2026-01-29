@@ -154,6 +154,9 @@ class CrossPointSettings {
   float getReaderLineCompression() const;
   unsigned long getSleepTimeoutMs() const;
   int getRefreshFrequency() const;
+  bool shouldShowProgressBar() const {
+    return statusBar == STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR || statusBar == STATUS_BAR_MODE::ONLY_PROGRESS_BAR;
+  }
 };
 
 // Helper macro to access settings
