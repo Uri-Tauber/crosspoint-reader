@@ -77,9 +77,8 @@ class ChapterHtmlSlimParser {
   int currentNoterefHrefLen = 0;
   std::function<void(Noteref&)> noterefCallback = nullptr;
 
-  // Footnote tracking for current page
-  FootnoteEntry currentPageFootnotes[16];
-  int currentPageFootnoteCount = 0;
+  // Footnote tracking
+  std::list<FootnoteEntry> pendingFootnotes;
 
   // Inline footnotes (aside) tracking
   bool insideAsideFootnote = false;
@@ -106,7 +105,7 @@ class ChapterHtmlSlimParser {
   int supDepth = -1;
   int anchorDepth = -1;
 
-  void addFootnoteToCurrentPage(const char* number, const char* href);
+  FootnoteEntry createFootnoteEntry(const char* number, const char* href);
   void startNewTextBlock(TextBlock::Style style);
   EpdFontFamily::Style getCurrentFontStyle() const;
   void flushPartWordBuffer();

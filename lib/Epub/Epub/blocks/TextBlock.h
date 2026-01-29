@@ -32,6 +32,7 @@ class TextBlock final : public Block {
   void setStyle(const Style style) { this->style = style; }
   Style getStyle() const { return style; }
   bool isEmpty() override { return words.empty(); }
+  const std::list<std::string>& getWords() const { return words; }
   void layout(GfxRenderer& renderer) override {};
   // given a renderer works out where to break the words into lines
   void render(const GfxRenderer& renderer, int fontId, int x, int y) const;

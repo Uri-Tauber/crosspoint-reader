@@ -113,11 +113,12 @@ void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::Style style) {
     }
     makePages();
   }
+  pendingFootnotes.clear();
   currentTextBlock.reset(new ParsedText(style, extraParagraphSpacing, hyphenationEnabled));
 }
 
-void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const char* href) {
-  if (currentPageFootnoteCount >= 16) return;
+FootnoteEntry ChapterHtmlSlimParser::createFootnoteEntry(const char* number, const char* href) {
+  FootnoteEntry entry;
 
   Serial.printf("[%lu] [ADDFT] Adding footnote: num=%s, href=%s\n", millis(), number, href);
 
@@ -138,8 +139,8 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
         char rewrittenHref[64];
         snprintf(rewrittenHref, sizeof(rewrittenHref), "inline_%s.html#%s", inlineId, inlineId);
 
-        strncpy(currentPageFootnotes[currentPageFootnoteCount].href, rewrittenHref, 63);
-        currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+        strncpy(entry.href, rewrittenHref, 63);
+        entry.href[63] = '\0';
 
         Serial.printf("[%lu] [ADDFT] Rewrote inline href to: %s\n", millis(), rewrittenHref);
         foundInline = true;
@@ -154,8 +155,8 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
           char rewrittenHref[64];
           snprintf(rewrittenHref, sizeof(rewrittenHref), "pnote_%s.html#%s", inlineId, inlineId);
 
-          strncpy(currentPageFootnotes[currentPageFootnoteCount].href, rewrittenHref, 63);
-          currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+          strncpy(entry.href, rewrittenHref, 63);
+          entry.href[63] = '\0';
 
           Serial.printf("[%lu] [ADDFT] Rewrote paragraph note href to: %s\n", millis(), rewrittenHref);
           foundInline = true;
@@ -166,20 +167,20 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
 
     if (!foundInline) {
       // Normal href, just copy it
-      strncpy(currentPageFootnotes[currentPageFootnoteCount].href, href, 63);
-      currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+      strncpy(entry.href, href, 63);
+      entry.href[63] = '\0';
     }
   } else {
     // No anchor, just copy
-    strncpy(currentPageFootnotes[currentPageFootnoteCount].href, href, 63);
-    currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+    strncpy(entry.href, href, 63);
+    entry.href[63] = '\0';
   }
 
-  currentPageFootnoteCount++;
+  // Copy number
+  strncpy(entry.number, number, 2);
+  entry.number[2] = '\0';
 
-  Serial.printf("[%lu] [ADDFT] Stored as: num=%s, href=%s\n", millis(),
-                currentPageFootnotes[currentPageFootnoteCount - 1].number,
-                currentPageFootnotes[currentPageFootnoteCount - 1].href);
+  return entry;
 }
 
 void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char* name, const XML_Char** atts) {
@@ -688,18 +689,17 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
       if (self->currentNoterefTextLen > 0) {
         Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(), self->currentNoterefText, self->currentNoterefHref);
 
-        // Add footnote first (this does the rewriting)
-        self->addFootnoteToCurrentPage(self->currentNoterefText, self->currentNoterefHref);
+        // Create footnote entry (don't add to page yet)
+        FootnoteEntry entry = self->createFootnoteEntry(self->currentNoterefText, self->currentNoterefHref);
 
-        // Then call callback with the REWRITTEN href from currentPageFootnotes
-        if (self->noterefCallback && self->currentPageFootnoteCount > 0) {
+        // Then call callback with the REWRITTEN href
+        if (self->noterefCallback) {
           Noteref noteref;
           strncpy(noteref.number, self->currentNoterefText, 15);
           noteref.number[15] = '\0';
 
-          // Use the STORED href which has been rewritten
-          FootnoteEntry* lastFootnote = &self->currentPageFootnotes[self->currentPageFootnoteCount - 1];
-          strncpy(noteref.href, lastFootnote->href, 127);
+          // Use the rewritten href
+          strncpy(noteref.href, entry.href, 127);
           noteref.href[127] = '\0';
 
           self->noterefCallback(noteref);
@@ -716,6 +716,9 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         if (self->currentTextBlock) {
           self->currentTextBlock->addWord(formattedNoteref, fontStyle);
         }
+
+        // Store footnote for later placement on the correct page
+        self->pendingFootnotes.push_back(std::move(entry));
       }
 
       self->currentNoterefTextLen = 0;
@@ -846,7 +849,7 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   partWordBufferIndex = 0;
   insideNoteref = false;
   insideAsideFootnote = false;
-  currentPageFootnoteCount = 0;
+  pendingFootnotes.clear();
   isPass1CollectingAsides = false;
 
   supDepth = -1;
@@ -928,10 +931,6 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     makePages();
 
     if (currentPage) {
-      for (int i = 0; i < currentPageFootnoteCount; i++) {
-        currentPage->addFootnote(currentPageFootnotes[i].number, currentPageFootnotes[i].href);
-      }
-      currentPageFootnoteCount = 0;
       completePageFn(std::move(currentPage));
     }
 
@@ -946,23 +945,31 @@ void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
 
   if (currentPageNextY + lineHeight > viewportHeight) {
-    if (currentPage) {
-      for (int i = 0; i < currentPageFootnoteCount; i++) {
-        currentPage->addFootnote(currentPageFootnotes[i].number, currentPageFootnotes[i].href);
-      }
-      currentPageFootnoteCount = 0;
-    }
-
     completePageFn(std::move(currentPage));
     currentPage.reset(new Page());
     currentPageNextY = 0;
   }
 
-  if (currentPage && currentPage->elements.size() < 24) {  // Assuming generic capacity check or vector size
-    currentPage->elements.push_back(std::make_shared<PageLine>(line, 0, currentPageNextY));
-    currentPageNextY += lineHeight;
-  } else if (currentPage) {
-    Serial.printf("[%lu] [EHP] WARNING: Page element capacity reached, skipping element\n", millis());
+  if (currentPage) {
+    // Add footnotes that belong to this line
+    for (const auto& word : line->getWords()) {
+      if (!pendingFootnotes.empty()) {
+        const auto& nextFn = pendingFootnotes.front();
+        char marker[32];
+        snprintf(marker, sizeof(marker), "[%s]", nextFn.number);
+        if (word == marker) {
+          currentPage->addFootnote(nextFn.number, nextFn.href);
+          pendingFootnotes.pop_front();
+        }
+      }
+    }
+
+    if (currentPage->elements.size() < 24) {  // Assuming generic capacity check
+      currentPage->elements.push_back(std::make_shared<PageLine>(line, 0, currentPageNextY));
+      currentPageNextY += lineHeight;
+    } else {
+      Serial.printf("[%lu] [EHP] WARNING: Page element capacity reached, skipping element\n", millis());
+    }
   }
 }
 
