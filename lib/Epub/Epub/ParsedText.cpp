@@ -49,17 +49,25 @@ uint16_t measureWordWidth(const GfxRenderer& renderer, const int fontId, const s
 
 }  // namespace
 
-void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle) {
+void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
+                         std::unique_ptr<FootnoteEntry> footnote) {
   if (word.empty()) return;
 
   words.push_back(std::move(word));
   wordStyles.push_back(fontStyle);
+  if (footnote) {
+    wordHasFootnote.push_back(1);
+    footnoteQueue.push_back(*footnote);
+  } else {
+    wordHasFootnote.push_back(0);
+  }
 }
 
 // Consumes data to minimize memory usage
-void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fontId, const uint16_t viewportWidth,
-                                       const std::function<void(std::shared_ptr<TextBlock>)>& processLine,
-                                       const bool includeLastLine) {
+void ParsedText::layoutAndExtractLines(
+    const GfxRenderer& renderer, const int fontId, const uint16_t viewportWidth,
+    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine,
+    const bool includeLastLine) {
   if (words.empty()) {
     return;
   }
@@ -255,8 +263,8 @@ std::vector<size_t> ParsedText::computeHyphenatedLineBreaks(const GfxRenderer& r
   return lineBreakIndices;
 }
 
-// Splits words[wordIndex] into prefix (adding a hyphen only when needed) and remainder when a legal breakpoint fits the
-// available width.
+// Splits words[wordIndex] into prefix (adding a hyphen only when needed)
+// and remainder when a legal breakpoint fits the available width.
 bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availableWidth, const GfxRenderer& renderer,
                                       const int fontId, std::vector<uint16_t>& wordWidths,
                                       const bool allowFallbackBreaks) {
@@ -320,6 +328,13 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   words.insert(insertWordIt, remainder);
   wordStyles.insert(insertStyleIt, style);
 
+  // Split wordHasFootnote as well. The footnote (if any) is associated with the remainder word.
+  auto wordHasFootnoteIt = wordHasFootnote.begin();
+  std::advance(wordHasFootnoteIt, wordIndex);
+  uint8_t hasFootnote = *wordHasFootnoteIt;
+  *wordHasFootnoteIt = 0;  // First part doesn't have it anymore
+  wordHasFootnote.insert(std::next(wordHasFootnoteIt), hasFootnote);
+
   // Update cached widths to reflect the new prefix/remainder pairing.
   wordWidths[wordIndex] = static_cast<uint16_t>(chosenWidth);
   const uint16_t remainderWidth = measureWordWidth(renderer, fontId, remainder, style);
@@ -327,9 +342,10 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   return true;
 }
 
-void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const int spaceWidth,
-                             const std::vector<uint16_t>& wordWidths, const std::vector<size_t>& lineBreakIndices,
-                             const std::function<void(std::shared_ptr<TextBlock>)>& processLine) {
+void ParsedText::extractLine(
+    const size_t breakIndex, const int pageWidth, const int spaceWidth, const std::vector<uint16_t>& wordWidths,
+    const std::vector<size_t>& lineBreakIndices,
+    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine) {
   const size_t lineBreak = lineBreakIndices[breakIndex];
   const size_t lastBreakAt = breakIndex > 0 ? lineBreakIndices[breakIndex - 1] : 0;
   const size_t lineWordCount = lineBreak - lastBreakAt;
@@ -372,11 +388,28 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
   std::advance(wordEndIt, lineWordCount);
   std::advance(wordStyleEndIt, lineWordCount);
 
-  // *** CRITICAL STEP: CONSUME DATA USING SPLICE ***
   std::list<std::string> lineWords;
   lineWords.splice(lineWords.begin(), words, words.begin(), wordEndIt);
   std::list<EpdFontFamily::Style> lineWordStyles;
   lineWordStyles.splice(lineWordStyles.begin(), wordStyles, wordStyles.begin(), wordStyleEndIt);
+
+  // Extract footnote flags from deque
+  std::vector<FootnoteEntry> lineFootnotes;
+  for (size_t i = 0; i < lineWordCount; i++) {
+    if (!wordHasFootnote.empty()) {
+      uint8_t hasFn = wordHasFootnote.front();
+      wordHasFootnote.pop_front();
+
+      if (hasFn) {
+        if (footnoteQueue.empty()) {
+          Serial.printf("[%lu] [ERROR] Footnote flag set but queue empty! Flags/queue out of sync.\n", millis());
+          break;
+        }
+        lineFootnotes.push_back(footnoteQueue.front());
+        footnoteQueue.pop_front();
+      }
+    }
+  }
 
   for (auto& word : lineWords) {
     if (containsSoftHyphen(word)) {
@@ -384,5 +417,6 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
     }
   }
 
-  processLine(std::make_shared<TextBlock>(std::move(lineWords), std::move(lineXPos), std::move(lineWordStyles), style));
+  processLine(std::make_shared<TextBlock>(std::move(lineWords), std::move(lineXPos), std::move(lineWordStyles), style),
+              lineFootnotes);
 }

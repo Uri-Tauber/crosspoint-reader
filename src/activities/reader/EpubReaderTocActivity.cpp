@@ -112,20 +112,17 @@ void EpubReaderTocActivity::loopChapters() {
   const int totalItems = getChaptersTotalItems();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (isSyncItem(chaptersSelectorIndex)) {
+    if (hasSyncOption() && (chaptersSelectorIndex == 0 || chaptersSelectorIndex == totalItems - 1)) {
       launchSyncActivity();
       return;
     }
 
     int filteredIndex = chaptersSelectorIndex;
-
-    if (hasSyncOption() && chaptersSelectorIndex > 0) filteredIndex -= 1;
+    if (hasSyncOption()) filteredIndex -= 1;
 
     if (filteredIndex >= 0 && filteredIndex < static_cast<int>(filteredSpineIndices.size())) {
       onSelectSpineIndex(filteredSpineIndices[filteredIndex]);
     }
-  } else if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    onGoBack();
   } else if (upReleased) {
     if (totalItems > 0) {
       if (skipPage) {

@@ -116,14 +116,14 @@ void ChapterHtmlSlimParser::startNewTextBlock(const TextBlock::Style style) {
   currentTextBlock.reset(new ParsedText(style, extraParagraphSpacing, hyphenationEnabled));
 }
 
-void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const char* href) {
-  if (currentPageFootnoteCount >= 16) return;
+std::unique_ptr<FootnoteEntry> ChapterHtmlSlimParser::createFootnoteEntry(const char* number, const char* href) {
+  auto entry = std::unique_ptr<FootnoteEntry>(new FootnoteEntry());
 
-  Serial.printf("[%lu] [ADDFT] Adding footnote: num=%s, href=%s\n", millis(), number, href);
+  Serial.printf("[%lu] [ADDFT] Creating footnote: num=%s, href=%s\n", millis(), number, href);
 
   // Copy number
-  strncpy(currentPageFootnotes[currentPageFootnoteCount].number, number, 2);
-  currentPageFootnotes[currentPageFootnoteCount].number[2] = '\0';
+  strncpy(entry->number, number, 2);
+  entry->number[2] = '\0';
 
   // Check if this is an inline footnote reference
   const char* hashPos = strchr(href, '#');
@@ -138,8 +138,8 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
         char rewrittenHref[64];
         snprintf(rewrittenHref, sizeof(rewrittenHref), "inline_%s.html#%s", inlineId, inlineId);
 
-        strncpy(currentPageFootnotes[currentPageFootnoteCount].href, rewrittenHref, 63);
-        currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+        strncpy(entry->href, rewrittenHref, 63);
+        entry->href[63] = '\0';
 
         Serial.printf("[%lu] [ADDFT] Rewrote inline href to: %s\n", millis(), rewrittenHref);
         foundInline = true;
@@ -154,8 +154,8 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
           char rewrittenHref[64];
           snprintf(rewrittenHref, sizeof(rewrittenHref), "pnote_%s.html#%s", inlineId, inlineId);
 
-          strncpy(currentPageFootnotes[currentPageFootnoteCount].href, rewrittenHref, 63);
-          currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+          strncpy(entry->href, rewrittenHref, 63);
+          entry->href[63] = '\0';
 
           Serial.printf("[%lu] [ADDFT] Rewrote paragraph note href to: %s\n", millis(), rewrittenHref);
           foundInline = true;
@@ -166,20 +166,17 @@ void ChapterHtmlSlimParser::addFootnoteToCurrentPage(const char* number, const c
 
     if (!foundInline) {
       // Normal href, just copy it
-      strncpy(currentPageFootnotes[currentPageFootnoteCount].href, href, 63);
-      currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+      strncpy(entry->href, href, 63);
+      entry->href[63] = '\0';
     }
   } else {
     // No anchor, just copy
-    strncpy(currentPageFootnotes[currentPageFootnoteCount].href, href, 63);
-    currentPageFootnotes[currentPageFootnoteCount].href[63] = '\0';
+    strncpy(entry->href, href, 63);
+    entry->href[63] = '\0';
   }
 
-  currentPageFootnoteCount++;
-
-  Serial.printf("[%lu] [ADDFT] Stored as: num=%s, href=%s\n", millis(),
-                currentPageFootnotes[currentPageFootnoteCount - 1].number,
-                currentPageFootnotes[currentPageFootnoteCount - 1].href);
+  Serial.printf("[%lu] [ADDFT] Created as: num=%s, href=%s\n", millis(), entry->number, entry->href);
+  return entry;
 }
 
 void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char* name, const XML_Char** atts) {
@@ -593,7 +590,10 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     Serial.printf("[%lu] [EHP] Text block too long, splitting into multiple pages\n", millis());
     self->currentTextBlock->layoutAndExtractLines(
         self->renderer, self->fontId, self->viewportWidth,
-        [self](const std::shared_ptr<TextBlock>& textBlock) { self->addLineToPage(textBlock); }, false);
+        [self](const std::shared_ptr<TextBlock>& textBlock, const std::vector<FootnoteEntry>& footnotes) {
+          self->addLineToPage(textBlock, footnotes);
+        },
+        false);
   }
 }
 
@@ -688,18 +688,17 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
       if (self->currentNoterefTextLen > 0) {
         Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(), self->currentNoterefText, self->currentNoterefHref);
 
-        // Add footnote first (this does the rewriting)
-        self->addFootnoteToCurrentPage(self->currentNoterefText, self->currentNoterefHref);
+        // Create the footnote entry (this does the rewriting)
+        std::unique_ptr<FootnoteEntry> footnote =
+            self->createFootnoteEntry(self->currentNoterefText, self->currentNoterefHref);
 
-        // Then call callback with the REWRITTEN href from currentPageFootnotes
-        if (self->noterefCallback && self->currentPageFootnoteCount > 0) {
+        // Then call callback with the REWRITTEN href
+        if (self->noterefCallback && footnote) {
           Noteref noteref;
           strncpy(noteref.number, self->currentNoterefText, 15);
           noteref.number[15] = '\0';
 
-          // Use the STORED href which has been rewritten
-          FootnoteEntry* lastFootnote = &self->currentPageFootnotes[self->currentPageFootnoteCount - 1];
-          strncpy(noteref.href, lastFootnote->href, 127);
+          strncpy(noteref.href, footnote->href, 127);
           noteref.href[127] = '\0';
 
           self->noterefCallback(noteref);
@@ -712,9 +711,9 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         char formattedNoteref[32];
         snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentNoterefText);
 
-        // Add it as a word to the current text block
+        // Add it as a word to the current text block with the footnote attached
         if (self->currentTextBlock) {
-          self->currentTextBlock->addWord(formattedNoteref, fontStyle);
+          self->currentTextBlock->addWord(formattedNoteref, fontStyle, std::move(footnote));
         }
       }
 
@@ -846,7 +845,6 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   partWordBufferIndex = 0;
   insideNoteref = false;
   insideAsideFootnote = false;
-  currentPageFootnoteCount = 0;
   isPass1CollectingAsides = false;
 
   supDepth = -1;
@@ -928,10 +926,6 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     makePages();
 
     if (currentPage) {
-      for (int i = 0; i < currentPageFootnoteCount; i++) {
-        currentPage->addFootnote(currentPageFootnotes[i].number, currentPageFootnotes[i].href);
-      }
-      currentPageFootnoteCount = 0;
       completePageFn(std::move(currentPage));
     }
 
@@ -942,17 +936,11 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   return true;
 }
 
-void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
+void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line,
+                                          const std::vector<FootnoteEntry>& footnotes) {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
 
   if (currentPageNextY + lineHeight > viewportHeight) {
-    if (currentPage) {
-      for (int i = 0; i < currentPageFootnoteCount; i++) {
-        currentPage->addFootnote(currentPageFootnotes[i].number, currentPageFootnotes[i].href);
-      }
-      currentPageFootnoteCount = 0;
-    }
-
     completePageFn(std::move(currentPage));
     currentPage.reset(new Page());
     currentPageNextY = 0;
@@ -961,6 +949,11 @@ void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line) {
   if (currentPage && currentPage->elements.size() < 24) {  // Assuming generic capacity check or vector size
     currentPage->elements.push_back(std::make_shared<PageLine>(line, 0, currentPageNextY));
     currentPageNextY += lineHeight;
+
+    // Add footnotes for this line to the current page
+    for (const auto& fn : footnotes) {
+      currentPage->addFootnote(fn.number, fn.href);
+    }
   } else if (currentPage) {
     Serial.printf("[%lu] [EHP] WARNING: Page element capacity reached, skipping element\n", millis());
   }
@@ -980,7 +973,9 @@ void ChapterHtmlSlimParser::makePages() {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
   currentTextBlock->layoutAndExtractLines(
       renderer, fontId, viewportWidth,
-      [this](const std::shared_ptr<TextBlock>& textBlock) { addLineToPage(textBlock); });
+      [this](const std::shared_ptr<TextBlock>& textBlock, const std::vector<FootnoteEntry>& footnotes) {
+        addLineToPage(textBlock, footnotes);
+      });
   // Extra paragraph spacing if enabled
   if (extraParagraphSpacing) {
     currentPageNextY += lineHeight / 2;
