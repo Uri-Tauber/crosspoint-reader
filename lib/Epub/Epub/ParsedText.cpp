@@ -50,7 +50,7 @@ uint16_t measureWordWidth(const GfxRenderer& renderer, const int fontId, const s
 }  // namespace
 
 void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
-                         std::unique_ptr<FootnoteEntry> footnote) {
+                         std::unique_ptr<FootnoteEntry> footnote, std::vector<std::string> anchors) {
   if (word.empty()) return;
 
   words.push_back(std::move(word));
@@ -61,12 +61,14 @@ void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
   } else {
     wordHasFootnote.push_back(0);
   }
+  wordAnchors.push_back(std::move(anchors));
 }
 
 // Consumes data to minimize memory usage
 void ParsedText::layoutAndExtractLines(
     const GfxRenderer& renderer, const int fontId, const uint16_t viewportWidth,
-    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine,
+    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&,
+                             const std::vector<std::string>&)>& processLine,
     const bool includeLastLine) {
   if (words.empty()) {
     return;
@@ -335,6 +337,11 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   *wordHasFootnoteIt = 0;  // First part doesn't have it anymore
   wordHasFootnote.insert(std::next(wordHasFootnoteIt), hasFootnote);
 
+  // Split wordAnchors. The anchors stay with the first part.
+  auto wordAnchorsIt = wordAnchors.begin();
+  std::advance(wordAnchorsIt, wordIndex);
+  wordAnchors.insert(std::next(wordAnchorsIt), {});
+
   // Update cached widths to reflect the new prefix/remainder pairing.
   wordWidths[wordIndex] = static_cast<uint16_t>(chosenWidth);
   const uint16_t remainderWidth = measureWordWidth(renderer, fontId, remainder, style);
@@ -345,7 +352,8 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
 void ParsedText::extractLine(
     const size_t breakIndex, const int pageWidth, const int spaceWidth, const std::vector<uint16_t>& wordWidths,
     const std::vector<size_t>& lineBreakIndices,
-    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine) {
+    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&,
+                             const std::vector<std::string>&)>& processLine) {
   const size_t lineBreak = lineBreakIndices[breakIndex];
   const size_t lastBreakAt = breakIndex > 0 ? lineBreakIndices[breakIndex - 1] : 0;
   const size_t lineWordCount = lineBreak - lastBreakAt;
@@ -393,8 +401,9 @@ void ParsedText::extractLine(
   std::list<EpdFontFamily::Style> lineWordStyles;
   lineWordStyles.splice(lineWordStyles.begin(), wordStyles, wordStyles.begin(), wordStyleEndIt);
 
-  // Extract footnote flags from deque
+  // Extract footnote flags and anchors from deque
   std::vector<FootnoteEntry> lineFootnotes;
+  std::vector<std::string> lineAnchors;
   for (size_t i = 0; i < lineWordCount; i++) {
     if (!wordHasFootnote.empty()) {
       uint8_t hasFn = wordHasFootnote.front();
@@ -409,6 +418,14 @@ void ParsedText::extractLine(
         footnoteQueue.pop_front();
       }
     }
+    if (!wordAnchors.empty()) {
+      std::vector<std::string> anchors = std::move(wordAnchors.front());
+      wordAnchors.pop_front();
+      if (!anchors.empty()) {
+        lineAnchors.insert(lineAnchors.end(), std::make_move_iterator(anchors.begin()),
+                           std::make_move_iterator(anchors.end()));
+      }
+    }
   }
 
   for (auto& word : lineWords) {
@@ -418,5 +435,5 @@ void ParsedText::extractLine(
   }
 
   processLine(std::make_shared<TextBlock>(std::move(lineWords), std::move(lineXPos), std::move(lineWordStyles), style),
-              lineFootnotes);
+              lineFootnotes, lineAnchors);
 }

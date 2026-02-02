@@ -672,10 +672,52 @@ void EpubReaderActivity::navigateToHref(const char* href, bool savePosition) {
     return;
   }
 
+  // Find target page for anchor if provided
+  int targetPage = 0;
+  if (!anchor.empty()) {
+    // If target is in current section, use its anchor map
+    if (targetSpineIndex == currentSpineIndex && section) {
+      int p = section->getPageForAnchor(anchor);
+      if (p != -1) {
+        targetPage = p;
+      }
+    } else {
+      // Create a temporary section to find the anchor
+      // We don't want to re-render, so only load if cache exists
+      Section tmpSection(epub, targetSpineIndex, renderer);
+      int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
+      renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
+                                       &orientedMarginLeft);
+      orientedMarginTop += SETTINGS.screenMargin;
+      orientedMarginLeft += SETTINGS.screenMargin;
+      orientedMarginRight += SETTINGS.screenMargin;
+      orientedMarginBottom += SETTINGS.screenMargin;
+
+      if (SETTINGS.statusBar != CrossPointSettings::STATUS_BAR_MODE::NONE) {
+        const bool showProgressBar = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR ||
+                                     SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_PROGRESS_BAR;
+        orientedMarginBottom += statusBarMargin - SETTINGS.screenMargin +
+                                (showProgressBar ? (ScreenComponents::BOOK_PROGRESS_BAR_HEIGHT + progressBarMarginTop) : 0);
+      }
+
+      const int viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
+      const int viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
+
+      if (tmpSection.loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                     SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
+                                     viewportHeight, SETTINGS.hyphenationEnabled)) {
+        int p = tmpSection.getPageForAnchor(anchor);
+        if (p != -1) {
+          targetPage = p;
+        }
+      }
+    }
+  }
+
   // Navigate to the target chapter
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   currentSpineIndex = targetSpineIndex;
-  nextPageNumber = 0;
+  nextPageNumber = targetPage;
   section.reset();
   xSemaphoreGive(renderingMutex);
 

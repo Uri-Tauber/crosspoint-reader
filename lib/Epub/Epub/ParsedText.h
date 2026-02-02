@@ -19,6 +19,7 @@ class ParsedText {
   std::list<EpdFontFamily::Style> wordStyles;
   std::deque<uint8_t> wordHasFootnote;
   std::deque<FootnoteEntry> footnoteQueue;
+  std::deque<std::vector<std::string>> wordAnchors;
   TextBlock::Style style;
   bool extraParagraphSpacing;
   bool hyphenationEnabled;
@@ -33,7 +34,8 @@ class ParsedText {
   void extractLine(
       size_t breakIndex, int pageWidth, int spaceWidth, const std::vector<uint16_t>& wordWidths,
       const std::vector<size_t>& lineBreakIndices,
-      const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine);
+      const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&,
+                               const std::vector<std::string>&)>& processLine);
   std::vector<uint16_t> calculateWordWidths(const GfxRenderer& renderer, int fontId);
 
  public:
@@ -42,13 +44,15 @@ class ParsedText {
       : style(style), extraParagraphSpacing(extraParagraphSpacing), hyphenationEnabled(hyphenationEnabled) {}
   ~ParsedText() = default;
 
-  void addWord(std::string word, EpdFontFamily::Style fontStyle, std::unique_ptr<FootnoteEntry> footnote = nullptr);
+  void addWord(std::string word, EpdFontFamily::Style fontStyle, std::unique_ptr<FootnoteEntry> footnote = nullptr,
+               std::vector<std::string> anchors = {});
   void setStyle(const TextBlock::Style style) { this->style = style; }
   TextBlock::Style getStyle() const { return style; }
   size_t size() const { return words.size(); }
   bool isEmpty() const { return words.empty(); }
   void layoutAndExtractLines(
       const GfxRenderer& renderer, int fontId, uint16_t viewportWidth,
-      const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine,
+      const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&,
+                               const std::vector<std::string>&)>& processLine,
       bool includeLastLine = true);
 };

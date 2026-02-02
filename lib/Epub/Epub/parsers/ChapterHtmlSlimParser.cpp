@@ -145,7 +145,9 @@ void ChapterHtmlSlimParser::flushPartWordBuffer() {
   EpdFontFamily::Style fontStyle = getCurrentFontStyle();
   // flush the buffer
   partWordBuffer[partWordBufferIndex] = '\0';
-  currentTextBlock->addWord(std::move(replaceHtmlEntities(partWordBuffer)), fontStyle);
+  currentTextBlock->addWord(std::move(replaceHtmlEntities(partWordBuffer)), fontStyle, nullptr,
+                            std::move(pendingAnchors));
+  pendingAnchors.clear();
   partWordBufferIndex = 0;
 }
 
@@ -264,6 +266,14 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   // ============================================================================
   // PASS 1: Detect and collect <aside epub:type="footnote">
   // ============================================================================
+  // Capture any ID for anchor tracking (in Pass 2)
+  if (!self->isPass1CollectingAsides) {
+    const char* idAttr = getAttribute(atts, "id");
+    if (idAttr) {
+      self->pendingAnchors.push_back(idAttr);
+    }
+  }
+
   if (strcmp(name, "aside") == 0) {
     const char* epubType = getAttribute(atts, "epub:type");
     const char* id = getAttribute(atts, "id");
@@ -398,6 +408,11 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   }
 
   if (matches(name, HEADER_TAGS, NUM_HEADER_TAGS)) {
+    // If we have pending anchors, we should make sure they are attached to the next word.
+    // startNewTextBlock might flush current buffer.
+    if (self->partWordBufferIndex > 0) {
+      self->flushPartWordBuffer();
+    }
     self->startNewTextBlock(TextBlock::CENTER_ALIGN);
     self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
     self->depth += 1;
@@ -415,6 +430,9 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       return;
     }
 
+    if (self->partWordBufferIndex > 0) {
+      self->flushPartWordBuffer();
+    }
     self->startNewTextBlock(static_cast<TextBlock::Style>(self->paragraphAlignment));
     if (strcmp(name, "li") == 0) {
       self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR);
@@ -562,9 +580,8 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     Serial.printf("[%lu] [EHP] Text block too long, splitting into multiple pages\n", millis());
     self->currentTextBlock->layoutAndExtractLines(
         self->renderer, self->fontId, self->viewportWidth,
-        [self](const std::shared_ptr<TextBlock>& textBlock, const std::vector<FootnoteEntry>& footnotes) {
-          self->addLineToPage(textBlock, footnotes);
-        },
+        [self](const std::shared_ptr<TextBlock>& textBlock, const std::vector<FootnoteEntry>& footnotes,
+               const std::vector<std::string>& anchors) { self->addLineToPage(textBlock, footnotes, anchors); },
         false);
   }
 }
@@ -647,7 +664,9 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         // Add it as a word to the current text block with the footnote attached
         EpdFontFamily::Style fontStyle = self->getCurrentFontStyle();
 
-        self->currentTextBlock->addWord(formattedNoteref, fontStyle, std::move(footnote));
+        self->currentTextBlock->addWord(formattedNoteref, fontStyle, std::move(footnote),
+                                        std::move(self->pendingAnchors));
+        self->pendingAnchors.clear();
       }
     }
 
@@ -856,8 +875,8 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   return true;
 }
 
-void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line,
-                                          const std::vector<FootnoteEntry>& footnotes) {
+void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line, const std::vector<FootnoteEntry>& footnotes,
+                                          const std::vector<std::string>& anchors) {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
 
   if (currentPageNextY + lineHeight > viewportHeight) {
@@ -873,6 +892,13 @@ void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line,
     // Add footnotes for this line to the current page
     for (const auto& fn : footnotes) {
       currentPage->addFootnote(fn.number, fn.href);
+    }
+
+    // Call anchor callback for each anchor on this line
+    if (anchorCallback) {
+      for (const auto& anchor : anchors) {
+        anchorCallback(anchor);
+      }
     }
   } else if (currentPage) {
     Serial.printf("[%lu] [EHP] WARNING: Page element capacity reached, skipping element\n", millis());
@@ -893,9 +919,8 @@ void ChapterHtmlSlimParser::makePages() {
   const int lineHeight = renderer.getLineHeight(fontId) * lineCompression;
   currentTextBlock->layoutAndExtractLines(
       renderer, fontId, viewportWidth,
-      [this](const std::shared_ptr<TextBlock>& textBlock, const std::vector<FootnoteEntry>& footnotes) {
-        addLineToPage(textBlock, footnotes);
-      });
+      [this](const std::shared_ptr<TextBlock>& textBlock, const std::vector<FootnoteEntry>& footnotes,
+             const std::vector<std::string>& anchors) { addLineToPage(textBlock, footnotes, anchors); });
   // Extra paragraph spacing if enabled
   if (extraParagraphSpacing) {
     currentPageNextY += lineHeight / 2;

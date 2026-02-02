@@ -101,6 +101,10 @@ class ChapterHtmlSlimParser {
   char currentAsideText[MAX_ASIDE_BUFFER] = {0};
   int currentAsideTextLen = 0;
 
+  // Anchor tracking
+  std::vector<std::string> pendingAnchors;
+  std::function<void(const std::string&)> anchorCallback = nullptr;
+
   // Flag to indicate we're in Pass 1 (collecting asides only)
   bool isPass1CollectingAsides = false;
 
@@ -159,7 +163,9 @@ class ChapterHtmlSlimParser {
   }
 
   bool parseAndBuildPages();
-  void addLineToPage(std::shared_ptr<TextBlock> line, const std::vector<FootnoteEntry>& footnotes);
+  void addLineToPage(std::shared_ptr<TextBlock> line, const std::vector<FootnoteEntry>& footnotes,
+                     const std::vector<std::string>& anchors);
 
   void setNoterefCallback(const std::function<void(Noteref&)>& callback) { noterefCallback = callback; }
+  void setAnchorCallback(const std::function<void(const std::string&)>& callback) { anchorCallback = callback; }
 };

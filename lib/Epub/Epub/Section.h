@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <memory>
+#include <unordered_map>
 
 #include "Epub.h"
 
@@ -13,6 +14,7 @@ class Section {
   GfxRenderer& renderer;
   std::string filePath;
   FsFile file;
+  std::unordered_map<std::string, uint16_t> anchorMap;
 
   void writeSectionFileHeader(int fontId, float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
                               uint16_t viewportWidth, uint16_t viewportHeight, bool hyphenationEnabled);
@@ -36,4 +38,5 @@ class Section {
                          const std::function<void()>& progressSetupFn = nullptr,
                          const std::function<void(int)>& progressFn = nullptr);
   std::unique_ptr<Page> loadPageFromSectionFile();
+  int getPageForAnchor(const std::string& anchor) const;
 };
