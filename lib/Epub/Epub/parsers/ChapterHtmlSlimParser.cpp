@@ -55,33 +55,78 @@ std::string replaceHtmlEntities(const char* text) {
   if (!text) return "";
   std::string s(text);
 
-  // Replace common entities
   size_t pos = 0;
-  while ((pos = s.find("&lt;", pos)) != std::string::npos) {
-    s.replace(pos, 4, "<");
-    pos += 1;
+  while (pos < s.length()) {
+    if (s[pos] == '&') {
+      bool replaced = false;
+      const char* ptr = s.c_str() + pos;  // Get pointer to current position (no allocation)
+
+      if (pos + 1 < s.length()) {
+        switch (s[pos + 1]) {
+          case 'l':  // &lt;
+            if (pos + 3 < s.length() && strncmp(ptr, "&lt;", 4) == 0) {
+              s.replace(pos, 4, "<");
+              replaced = true;
+            }
+            break;
+
+          case 'g':  // &gt;
+            if (pos + 3 < s.length() && strncmp(ptr, "&gt;", 4) == 0) {
+              s.replace(pos, 4, ">");
+              replaced = true;
+            }
+            break;
+
+          case 'a':  // &amp; or &apos;
+            if (pos + 4 < s.length() && strncmp(ptr, "&amp;", 5) == 0) {
+              s.replace(pos, 5, "&");
+              replaced = true;
+            } else if (pos + 5 < s.length() && strncmp(ptr, "&apos;", 6) == 0) {
+              s.replace(pos, 6, "'");
+              replaced = true;
+            }
+            break;
+
+          case 'q':  // &quot;
+            if (pos + 5 < s.length() && strncmp(ptr, "&quot;", 6) == 0) {
+              s.replace(pos, 6, "\"");
+              replaced = true;
+            }
+            break;
+        }
+      }
+
+      // Don't increment pos if we replaced - allows nested entity handling
+      // Example: &amp;lt; -> &lt; (iteration 1) -> < (iteration 2)
+      if (!replaced) {
+        pos++;
+      }
+    } else {
+      pos++;
+    }
   }
-  pos = 0;
-  while ((pos = s.find("&gt;", pos)) != std::string::npos) {
-    s.replace(pos, 4, ">");
-    pos += 1;
-  }
-  pos = 0;
-  while ((pos = s.find("&amp;", pos)) != std::string::npos) {
-    s.replace(pos, 5, "&");
-    pos += 1;
-  }
-  pos = 0;
-  while ((pos = s.find("&quot;", pos)) != std::string::npos) {
-    s.replace(pos, 6, "\"");
-    pos += 1;
-  }
-  pos = 0;
-  while ((pos = s.find("&apos;", pos)) != std::string::npos) {
-    s.replace(pos, 6, "'");
-    pos += 1;
-  }
+
   return s;
+}
+
+// Check if href points to internal EPUB location (not external URL)
+bool isInternalEpubLink(const char* href) {
+  if (!href) return false;
+
+  switch (href[0]) {
+    case 'h':  // http/https
+      if (strncmp(href, "http", 4) == 0) return false;
+    case 'f':  // ftp
+      if (strncmp(href, "ftp://", 6) == 0) return false;
+    case 'm':  // mailto
+      if (strncmp(href, "mailto:", 7) == 0) return false;
+    case 't':  // tel
+      if (strncmp(href, "tel:", 4) == 0) return false;
+    case 's':  // sms
+      if (strncmp(href, "sms:", 4) == 0) return false;
+  }
+  // Everything else is internal (relative paths, anchors, etc.)
+  return true;
 }
 
 EpdFontFamily::Style ChapterHtmlSlimParser::getCurrentFontStyle() const {
@@ -240,130 +285,57 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
         // Pass 2: Skip the aside (we already have it from Pass 1)
         Serial.printf("[%lu] [ASIDE] Skipping aside in Pass 2: id=%s\n", millis(), id);
 
-        // Find the inline footnote text
-        for (int i = 0; i < self->inlineFootnoteCount; i++) {
-          if (strcmp(self->inlineFootnotes[i].id, id) == 0 && self->inlineFootnotes[i].text) {
-            // Output the footnote text as normal text
-            const char* text = self->inlineFootnotes[i].text;
-            int textLen = strlen(text);
-
-            // Process it through characterData
-            self->characterData(self, text, textLen);
-
-            Serial.printf("[%lu] [ASIDE] Rendered aside text: %.80s...\n", millis(), text);
-            break;
-          }
-        }
-
-        // Skip the aside element itself
         self->skipUntilDepth = self->depth;
       }
-
-      self->depth += 1;
-      return;
     }
-  }
 
-  // ============================================================================
-  // PASS 1: Skip everything else
-  // ============================================================================
-  if (self->isPass1CollectingAsides) {
     self->depth += 1;
     return;
   }
 
   // ============================================================================
-  // PASS 2: Skip <p class="note"> (we already have them from Pass 1)
+  // PASS 2: FOOTNOTE DETECTION
+  // All <a> tags with internal hrefs are treated as footnotes
   // ============================================================================
-  if (strcmp(name, "p") == 0) {
-    const char* classAttr = getAttribute(atts, "class");
-
-    if (classAttr && (strcmp(classAttr, "note") == 0 || strstr(classAttr, "note"))) {
-      Serial.printf("[%lu] [PNOTE] Skipping paragraph note in Pass 2\n", millis());
-      self->skipUntilDepth = self->depth;
-      self->depth += 1;
-      return;
-    }
-  }
-
-  // ============================================================================
-  // PASS 2: Normal parsing
-  // ============================================================================
-
-  // Middle of skip
-  if (self->skipUntilDepth < self->depth) {
-    self->depth += 1;
-    return;
-  }
-
-  // Rest of startElement logic for pass 2...
-  if (strcmp(name, "sup") == 0) {
-    self->supDepth = self->depth;
-
-    // Case A: Found <sup> inside a normal <a> (which wasn't marked as a note yet)
-    // Example: <a href="..."><sup>*</sup></a>
-    if (self->anchorDepth != -1 && !self->insideNoteref) {
-      Serial.printf("[%lu] [NOTEREF] Found <sup> inside <a>, promoting to noteref\n", millis());
-
-      // Flush the current word buffer (text before the sup is normal text)
-      if (self->partWordBufferIndex > 0) {
-        self->flushPartWordBuffer();
-      }
-
-      // Activate footnote mode
-      self->insideNoteref = true;
-      self->currentNoterefTextLen = 0;
-      self->currentNoterefText[0] = '\0';
-      // Note: The href was already saved to currentNoterefHref when the <a> was opened (see below)
-    }
-  }
-
-  // === Update the existing A block ===
-  if (strcmp(name, "a") == 0) {
-    const char* epubType = getAttribute(atts, "epub:type");
+  if (!self->isPass1CollectingAsides && strcmp(name, "a") == 0) {
     const char* href = getAttribute(atts, "href");
 
-    // Save Anchor state
-    self->anchorDepth = self->depth;
+    // Flush pending word buffer before starting footnote
+    if (self->partWordBufferIndex > 0) {
+      self->flushPartWordBuffer();
+    }
+    // Check for internal EPUB link
+    bool isInternalLink = isInternalEpubLink(href);
 
-    // Optimistically save the href, in case this becomes a footnote later (via internal <sup>)
-    if (!self->insideNoteref) {
-      if (href) {
-        strncpy(self->currentNoterefHref, href, 127);
-        self->currentNoterefHref[127] = '\0';
-      } else {
-        self->currentNoterefHref[0] = '\0';
-      }
+    // Special case: javascript:void(0) links with data attributes
+    // Example: <a href="javascript:void(0)"
+    // data-xyz="{&quot;name&quot;:&quot;OPS/ch2.xhtml&quot;,&quot;frag&quot;:&quot;id46&quot;}">
+    if (href && strncmp(href, "javascript:", 11) == 0) {
+      isInternalLink = false;
+
+      // TODO: Parse data-* attributes to extract actual href
     }
 
-    // Footnote detection: via epub:type, rnote pattern, or if we are already inside a <sup>
-    // Case B: Found <a> inside <sup>
-    // Example: <sup><a href="...">1</a></sup>
-    bool isNoteref = (epubType && strcmp(epubType, "noteref") == 0);
+    // If it's an internal link, treat it as a footnote
+    if (isInternalLink && href) {
+      Serial.printf("[%lu] [FOOTNOTE] Found internal link (footnote candidate): href=%s\n", millis(), href);
 
-    if (!isNoteref && href && href[0] == '#' && strncmp(href + 1, "rnote", 5) == 0) {
-      isNoteref = true;
+      self->insideFootnoteLink = true;
+      self->footnoteLinkDepth = self->depth;
+      self->currentFootnoteLinkHref[0] = '\0';
+      strncpy(self->currentFootnoteLinkHref, href, 63);
+      self->currentFootnoteLinkHref[63] = '\0';
+
+      self->currentFootnoteLinkText[0] = '\0';
+      self->currentFootnoteLinkTextLen = 0;
     }
 
-    // New detection: if we are inside SUP, this link is a footnote
-    if (!isNoteref && self->supDepth != -1) {
-      isNoteref = true;
-      Serial.printf("[%lu] [NOTEREF] Found <a> inside <sup>, treating as noteref\n", millis());
-    }
-
-    if (isNoteref) {
-      Serial.printf("[%lu] [NOTEREF] Found noteref: href=%s\n", millis(), href ? href : "null");
-      // Flush word buffer
-      if (self->partWordBufferIndex > 0) {
-        self->flushPartWordBuffer();
-      }
-      self->insideNoteref = true;
-      self->currentNoterefTextLen = 0;
-      self->currentNoterefText[0] = '\0';
-      self->depth += 1;
-      return;
-    }
+    self->depth += 1;
+    return;
   }
+  // ============================================================================
+  // Handle other tags
+  // ============================================================================
 
   // Special handling for tables - show placeholder text instead of dropping silently
   if (strcmp(name, "table") == 0) {
@@ -533,13 +505,13 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
   }
 
   // Rest of characterData logic for pass 2...
-  if (self->insideNoteref) {
+  if (self->insideFootnoteLink) {
     for (int i = 0; i < len; i++) {
       unsigned char c = (unsigned char)s[i];
       // Skip whitespace and brackets []
-      if (!isWhitespace(c) && c != '[' && c != ']' && self->currentNoterefTextLen < 15) {
-        self->currentNoterefText[self->currentNoterefTextLen++] = c;
-        self->currentNoterefText[self->currentNoterefTextLen] = '\0';
+      if (!isWhitespace(c) && c != '[' && c != ']' && self->currentFootnoteLinkTextLen < 63) {
+        self->currentFootnoteLinkText[self->currentFootnoteLinkTextLen++] = c;
+        self->currentFootnoteLinkText[self->currentFootnoteLinkTextLen] = '\0';
       }
     }
     return;
@@ -600,144 +572,95 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
 void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* name) {
   auto* self = static_cast<ChapterHtmlSlimParser*>(userData);
 
-  // Closing paragraph note in Pass 1
-  if (strcmp(name, "p") == 0 && self->insideParagraphNote && self->depth - 1 == self->paragraphNoteDepth) {
-    if (self->isPass1CollectingAsides && self->currentParagraphNoteTextLen > 0 && self->paragraphNoteCount < 32 &&
-        self->currentParagraphNoteId[0] != '\0') {
-      // Copy ID
-      strncpy(self->paragraphNotes[self->paragraphNoteCount].id, self->currentParagraphNoteId, 15);
-      self->paragraphNotes[self->paragraphNoteCount].id[15] = '\0';
+  // ============================================================================
+  // PASS 1: End of <aside epub:type="footnote">
+  // ============================================================================
+  if (strcmp(name, "aside") == 0 && self->insideAsideFootnote && self->depth == self->asideDepth + 1) {
+    if (self->isPass1CollectingAsides) {
+      // Store the inline footnote
+      if (self->inlineFootnoteCount < 32) {  // MAX_INLINE_FOOTNOTES
+        InlineFootnote& fn = self->inlineFootnotes[self->inlineFootnoteCount];
 
-      // Allocate memory for text
-      size_t textLen = strlen(self->currentParagraphNoteText);
-      self->paragraphNotes[self->paragraphNoteCount].text = static_cast<char*>(malloc(textLen + 1));
+        strncpy(fn.id, self->currentAsideId, 15);
+        fn.id[15] = '\0';
 
-      if (self->paragraphNotes[self->paragraphNoteCount].text) {
-        strcpy(self->paragraphNotes[self->paragraphNoteCount].text, self->currentParagraphNoteText);
+        strncpy(fn.text, self->currentAsideText, 255);
+        fn.text[255] = '\0';
 
-        Serial.printf("[%lu] [PNOTE] Stored: %s -> %.80s... (allocated %d bytes)\n", millis(),
-                      self->currentParagraphNoteId, self->currentParagraphNoteText, textLen + 1);
+        self->inlineFootnoteCount++;
+
+        Serial.printf("[%lu] [ASIDE] Stored inline footnote: id=%s, text=%.80s\n", millis(), fn.id, fn.text);
+      }
+    }
+
+    self->insideAsideFootnote = false;
+    self->currentAsideTextLen = 0;
+    self->currentAsideText[0] = '\0';
+  }
+
+  // ============================================================================
+  // PASS 1: End of <p class="note">
+  // ============================================================================
+  if (strcmp(name, "p") == 0 && self->insideParagraphNote && self->depth == self->paragraphNoteDepth + 1) {
+    if (self->isPass1CollectingAsides && self->currentParagraphNoteId[0] != '\0') {
+      // Store the paragraph note
+      if (self->paragraphNoteCount < 32) {  // MAX_PARAGRAPH_NOTES
+        ParagraphNote& pn = self->paragraphNotes[self->paragraphNoteCount];
+
+        strncpy(pn.id, self->currentParagraphNoteId, 15);
+        pn.id[15] = '\0';
+
+        strncpy(pn.text, self->currentParagraphNoteText, 255);
+        pn.text[255] = '\0';
 
         self->paragraphNoteCount++;
+
+        Serial.printf("[%lu] [PNOTE] Stored paragraph note: id=%s, text=%.80s\n", millis(), pn.id, pn.text);
       }
     }
 
     self->insideParagraphNote = false;
-    self->depth -= 1;
-    return;
+    self->currentParagraphNoteTextLen = 0;
+    self->currentParagraphNoteText[0] = '\0';
+    self->currentParagraphNoteId[0] = '\0';
   }
 
-  // Closing aside - handle differently for Pass 1 vs Pass 2
-  if (strcmp(name, "aside") == 0 && self->insideAsideFootnote && self->depth - 1 == self->asideDepth) {
-    // Store footnote ONLY in Pass 1
-    if (self->isPass1CollectingAsides && self->currentAsideTextLen > 0 && self->inlineFootnoteCount < 16) {
-      // Copy ID (max 2 digits)
-      strncpy(self->inlineFootnotes[self->inlineFootnoteCount].id, self->currentAsideId, 2);
-      self->inlineFootnotes[self->inlineFootnoteCount].id[2] = '\0';
+  // ============================================================================
+  // PASS 2: End of footnote link
+  // ============================================================================
+  if (!self->isPass1CollectingAsides && strcmp(name, "a") == 0 && self->insideFootnoteLink &&
+      self->depth == self->footnoteLinkDepth + 1) {
+    // We have collected the footnote link text
+    // Now add it to the current text block as a footnote
+    if (self->currentFootnoteLinkText[0] != '\0' && self->currentFootnoteLinkHref[0] != '\0') {
+      Serial.printf("[%lu] [FOOTNOTE] Complete footnote: text='%s', href='%s'\n", millis(),
+                    self->currentFootnoteLinkText, self->currentFootnoteLinkHref);
 
-      // DYNAMIC ALLOCATION: allocate exactly the needed size + 1
-      size_t textLen = strlen(self->currentAsideText);
-      self->inlineFootnotes[self->inlineFootnoteCount].text = static_cast<char*>(malloc(textLen + 1));
-
-      if (self->inlineFootnotes[self->inlineFootnoteCount].text) {
-        strcpy(self->inlineFootnotes[self->inlineFootnoteCount].text, self->currentAsideText);
-
-        Serial.printf("[%lu] [ASIDE] Stored: %s -> %.80s... (allocated %d bytes)\n", millis(), self->currentAsideId,
-                      self->currentAsideText, textLen + 1);
-
-        self->inlineFootnoteCount++;
-      } else {
-        Serial.printf("[%lu] [ASIDE] ERROR: Failed to allocate %d bytes for footnote %s\n", millis(), textLen + 1,
-                      self->currentAsideId);
-      }
-    }
-
-    // Reset state AFTER processing
-    self->insideAsideFootnote = false;
-    self->depth -= 1;
-    return;
-  }
-
-  // During pass 1, skip all other processing
-  if (self->isPass1CollectingAsides) {
-    self->depth -= 1;
-    return;
-  }
-
-  // ---------------------------------------------------------
-  // PASS 2: Normal Parsing Logic
-  // ---------------------------------------------------------
-
-  // [NEW] 1. Reset Superscript State
-  // We must ensure we know when we are leaving a <sup> tag
-  if (strcmp(name, "sup") == 0) {
-    if (self->supDepth == self->depth) {
-      self->supDepth = -1;
-    }
-  }
-
-  // [MODIFIED] 2. Handle 'a' tags (Anchors/Footnotes)
-  // We check "a" generally now, to handle both Noterefs AND resetting regular links
-  if (strcmp(name, "a") == 0) {
-    // Track if this was a noteref so we can return early later
-    bool wasNoteref = self->insideNoteref;
-
-    if (self->insideNoteref) {
-      self->insideNoteref = false;
-
-      if (self->currentNoterefTextLen > 0) {
-        Serial.printf("[%lu] [NOTEREF] %s -> %s\n", millis(), self->currentNoterefText, self->currentNoterefHref);
-
-        // Create the footnote entry (this does the rewriting)
-        std::unique_ptr<FootnoteEntry> footnote =
-            self->createFootnoteEntry(self->currentNoterefText, self->currentNoterefHref);
-
-        // Then call callback with the REWRITTEN href
-        if (self->noterefCallback && footnote) {
-          Noteref noteref;
-          strncpy(noteref.number, self->currentNoterefText, 15);
-          noteref.number[15] = '\0';
-
-          strncpy(noteref.href, footnote->href, 127);
-          noteref.href[127] = '\0';
-
-          self->noterefCallback(noteref);
-        }
-
-        // Ensure [1] appears inline after the word it references
-        EpdFontFamily::Style fontStyle = self->getCurrentFontStyle();
+      // Add footnote to current text block
+      if (self->currentTextBlock) {
+        auto footnote = self->createFootnoteEntry(self->currentFootnoteLinkText, self->currentFootnoteLinkHref);
 
         // Format the noteref text with brackets
         char formattedNoteref[32];
-        snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentNoterefText);
+        snprintf(formattedNoteref, sizeof(formattedNoteref), "[%s]", self->currentFootnoteLinkText);
 
         // Add it as a word to the current text block with the footnote attached
-        if (self->currentTextBlock) {
-          self->currentTextBlock->addWord(formattedNoteref, fontStyle, std::move(footnote));
-        }
+        EpdFontFamily::Style fontStyle = self->getCurrentFontStyle();
+
+        self->currentTextBlock->addWord(formattedNoteref, fontStyle, std::move(footnote));
       }
-
-      self->currentNoterefTextLen = 0;
-      self->currentNoterefText[0] = '\0';
-      self->currentNoterefHrefLen = 0;
-      // Note: We do NOT clear currentNoterefHref here yet, we do it below
     }
 
-    // [NEW] Reset Anchor Depth
-    // This runs for BOTH footnotes and regular links to ensure state is clean
-    if (self->anchorDepth == self->depth) {
-      self->anchorDepth = -1;
-      self->currentNoterefHref[0] = '\0';
-    }
-
-    // If it was a noteref, we are done with this tag, return early
-    if (wasNoteref) {
-      self->depth -= 1;
-      return;
-    }
+    self->insideFootnoteLink = false;
+    self->currentFootnoteLinkTextLen = 0;
+    self->currentFootnoteLinkText[0] = '\0';
+    self->currentFootnoteLinkHref[0] = '\0';
   }
 
-  if (self->partWordBufferIndex > 0) {
+  // ============================================================================
+  // PASS 2: Normal end element handling
+  // ============================================================================
+  if (!self->isPass1CollectingAsides) {
     const bool shouldBreakText =
         matches(name, BLOCK_TAGS, NUM_BLOCK_TAGS) || matches(name, HEADER_TAGS, NUM_HEADER_TAGS) ||
         matches(name, BOLD_TAGS, NUM_BOLD_TAGS) || matches(name, ITALIC_TAGS, NUM_ITALIC_TAGS) ||
@@ -843,12 +766,9 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
   boldUntilDepth = INT_MAX;
   italicUntilDepth = INT_MAX;
   partWordBufferIndex = 0;
-  insideNoteref = false;
   insideAsideFootnote = false;
+  insideFootnoteLink = false;
   isPass1CollectingAsides = false;
-
-  supDepth = -1;
-  anchorDepth = -1;
 
   startNewTextBlock((TextBlock::Style)this->paragraphAlignment);
 

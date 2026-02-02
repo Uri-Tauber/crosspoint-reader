@@ -70,7 +70,6 @@ class ChapterHtmlSlimParser {
   bool hyphenationEnabled;
 
   // Noteref tracking
-  bool insideNoteref = false;
   char currentNoterefText[16] = {0};
   int currentNoterefTextLen = 0;
   char currentNoterefHref[128] = {0};
@@ -90,6 +89,13 @@ class ChapterHtmlSlimParser {
   char currentParagraphNoteText[MAX_PNOTE_BUFFER] = {0};
   int currentParagraphNoteTextLen = 0;
 
+  // Footnote link state
+  bool insideFootnoteLink = false;
+  int footnoteLinkDepth = -1;
+  char currentFootnoteLinkText[64];
+  char currentFootnoteLinkHref[64];
+  size_t currentFootnoteLinkTextLen = 0;
+
   // Temporary buffer for accumulation, will be copied to dynamic allocation
   static constexpr int MAX_ASIDE_BUFFER = 1024;
   char currentAsideText[MAX_ASIDE_BUFFER] = {0};
@@ -97,10 +103,6 @@ class ChapterHtmlSlimParser {
 
   // Flag to indicate we're in Pass 1 (collecting asides only)
   bool isPass1CollectingAsides = false;
-
-  // Track superscript depth
-  int supDepth = -1;
-  int anchorDepth = -1;
 
   std::unique_ptr<FootnoteEntry> createFootnoteEntry(const char* number, const char* href);
   void startNewTextBlock(TextBlock::Style style);
