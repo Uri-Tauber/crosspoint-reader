@@ -19,7 +19,8 @@ class ParsedText {
   std::list<EpdFontFamily::Style> wordStyles;
   std::deque<uint8_t> wordHasFootnote;
   std::deque<FootnoteEntry> footnoteQueue;
-  std::deque<std::vector<std::string>> wordAnchors;
+  std::deque<uint8_t> wordAnchorCount;
+  std::deque<std::string> anchorQueue;
   TextBlock::Style style;
   bool extraParagraphSpacing;
   bool hyphenationEnabled;

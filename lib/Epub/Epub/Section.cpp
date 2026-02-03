@@ -170,13 +170,16 @@ bool Section::loadSectionFile(const int fontId, const float lineCompression, con
     file.seek(anchorMapOffset);
     uint32_t anchorCount;
     serialization::readPod(file, anchorCount);
+    anchorMap.reserve(anchorCount);
     for (uint32_t i = 0; i < anchorCount; i++) {
       std::string anchor;
       uint16_t page;
       serialization::readString(file, anchor);
       serialization::readPod(file, page);
-      anchorMap[anchor] = page;
+      anchorMap.push_back({std::move(anchor), page});
     }
+    std::sort(anchorMap.begin(), anchorMap.end(),
+              [](const AnchorEntry& a, const AnchorEntry& b) { return a.anchor < b.anchor; });
   }
 
   file.close();
@@ -270,7 +273,12 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
       [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
       progressFn));
 
-  visitor->setAnchorCallback([this](const std::string& anchor) { anchorMap[anchor] = this->pageCount; });
+  std::unordered_map<std::string, uint16_t> tempAnchorMap;
+  visitor->setAnchorCallback([this, &tempAnchorMap](const std::string& anchor) {
+    if (tempAnchorMap.find(anchor) == tempAnchorMap.end()) {
+      tempAnchorMap[anchor] = this->pageCount;
+    }
+  });
 
   Hyphenator::setPreferredLanguage(epub->getLanguage());
 
@@ -399,10 +407,19 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
 
   // Write Anchor Map
   const uint32_t anchorMapOffset = file.position();
-  serialization::writePod(file, static_cast<uint32_t>(anchorMap.size()));
-  for (const auto& pair : anchorMap) {
-    serialization::writeString(file, pair.first);
-    serialization::writePod(file, pair.second);
+  serialization::writePod(file, static_cast<uint32_t>(tempAnchorMap.size()));
+
+  std::vector<AnchorEntry> sortedAnchors;
+  sortedAnchors.reserve(tempAnchorMap.size());
+  for (auto& pair : tempAnchorMap) {
+    sortedAnchors.push_back({std::move(pair.first), pair.second});
+  }
+  std::sort(sortedAnchors.begin(), sortedAnchors.end(),
+            [](const AnchorEntry& a, const AnchorEntry& b) { return a.anchor < b.anchor; });
+
+  for (const auto& entry : sortedAnchors) {
+    serialization::writeString(file, entry.anchor);
+    serialization::writePod(file, entry.page);
   }
 
   // Go back and write LUT offset and Anchor Map offset
@@ -433,9 +450,10 @@ std::unique_ptr<Page> Section::loadPageFromSectionFile() {
 }
 
 int Section::getPageForAnchor(const std::string& anchor) const {
-  auto it = anchorMap.find(anchor);
-  if (it != anchorMap.end()) {
-    return it->second;
+  auto it = std::lower_bound(anchorMap.begin(), anchorMap.end(), anchor,
+                             [](const AnchorEntry& entry, const std::string& val) { return entry.anchor < val; });
+  if (it != anchorMap.end() && it->anchor == anchor) {
+    return it->page;
   }
   return -1;
 }

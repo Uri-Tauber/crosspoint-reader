@@ -61,7 +61,10 @@ void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
   } else {
     wordHasFootnote.push_back(0);
   }
-  wordAnchors.push_back(std::move(anchors));
+  wordAnchorCount.push_back(static_cast<uint8_t>(anchors.size()));
+  for (auto& anchor : anchors) {
+    anchorQueue.push_back(std::move(anchor));
+  }
 }
 
 // Consumes data to minimize memory usage
@@ -337,10 +340,10 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   *wordHasFootnoteIt = 0;  // First part doesn't have it anymore
   wordHasFootnote.insert(std::next(wordHasFootnoteIt), hasFootnote);
 
-  // Split wordAnchors. The anchors stay with the first part.
-  auto wordAnchorsIt = wordAnchors.begin();
-  std::advance(wordAnchorsIt, wordIndex);
-  wordAnchors.insert(std::next(wordAnchorsIt), {});
+  // Split wordAnchorCount. The anchors stay with the first part.
+  auto wordAnchorCountIt = wordAnchorCount.begin();
+  std::advance(wordAnchorCountIt, wordIndex);
+  wordAnchorCount.insert(std::next(wordAnchorCountIt), 0);
 
   // Update cached widths to reflect the new prefix/remainder pairing.
   wordWidths[wordIndex] = static_cast<uint16_t>(chosenWidth);
@@ -401,7 +404,7 @@ void ParsedText::extractLine(
   std::list<EpdFontFamily::Style> lineWordStyles;
   lineWordStyles.splice(lineWordStyles.begin(), wordStyles, wordStyles.begin(), wordStyleEndIt);
 
-  // Extract footnote flags and anchors from deque
+  // Extract footnote flags and anchors from deques
   std::vector<FootnoteEntry> lineFootnotes;
   std::vector<std::string> lineAnchors;
   for (size_t i = 0; i < lineWordCount; i++) {
@@ -418,12 +421,14 @@ void ParsedText::extractLine(
         footnoteQueue.pop_front();
       }
     }
-    if (!wordAnchors.empty()) {
-      std::vector<std::string> anchors = std::move(wordAnchors.front());
-      wordAnchors.pop_front();
-      if (!anchors.empty()) {
-        lineAnchors.insert(lineAnchors.end(), std::make_move_iterator(anchors.begin()),
-                           std::make_move_iterator(anchors.end()));
+    if (!wordAnchorCount.empty()) {
+      uint8_t count = wordAnchorCount.front();
+      wordAnchorCount.pop_front();
+      for (uint8_t j = 0; j < count; j++) {
+        if (!anchorQueue.empty()) {
+          lineAnchors.push_back(std::move(anchorQueue.front()));
+          anchorQueue.pop_front();
+        }
       }
     }
   }

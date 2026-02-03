@@ -14,7 +14,11 @@ class Section {
   GfxRenderer& renderer;
   std::string filePath;
   FsFile file;
-  std::unordered_map<std::string, uint16_t> anchorMap;
+  struct AnchorEntry {
+    std::string anchor;
+    uint16_t page;
+  };
+  std::vector<AnchorEntry> anchorMap;
 
   void writeSectionFileHeader(int fontId, float lineCompression, bool extraParagraphSpacing, uint8_t paragraphAlignment,
                               uint16_t viewportWidth, uint16_t viewportHeight, bool hyphenationEnabled);
