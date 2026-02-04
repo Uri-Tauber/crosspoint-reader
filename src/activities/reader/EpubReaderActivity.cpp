@@ -7,7 +7,9 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
-#include "EpubReaderTocActivity.h"
+#include "EpubReaderChapterSelectionActivity.h"
+#include "EpubReaderFootnoteSelectionActivity.h"
+#include "EpubReaderMenuActivity.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "ScreenComponents.h"
@@ -128,43 +130,10 @@ void EpubReaderActivity::loop() {
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
-
-    // Show consolidated TOC activity (Chapters and Footnotes)
     exitActivity();
-    enterNewActivity(new EpubReaderTocActivity(
-        this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
-        currentPageFootnotes,
-        [this] {
-          // onGoBack
-          exitActivity();
-          updateRequired = true;
-        },
-        [this](int newSpineIndex) {
-          // onSelectSpineIndex
-          if (currentSpineIndex != newSpineIndex) {
-            currentSpineIndex = newSpineIndex;
-            nextPageNumber = 0;
-            section.reset();
-          }
-          exitActivity();
-          updateRequired = true;
-        },
-        [this](const char* href) {
-          // onSelectFootnote
-          navigateToHref(href, true);
-          exitActivity();
-          updateRequired = true;
-        },
-        [this](int newSpineIndex, int newPage) {
-          // onSyncPosition
-          if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
-            currentSpineIndex = newSpineIndex;
-            nextPageNumber = newPage;
-            section.reset();
-          }
-          exitActivity();
-          updateRequired = true;
-        }));
+    enterNewActivity(new EpubReaderMenuActivity(
+        this->renderer, this->mappedInput, epub->getTitle(), [this]() { onReaderMenuBack(); },
+        [this](EpubReaderMenuActivity::MenuAction action) { onReaderMenuConfirm(action); }));
     xSemaphoreGive(renderingMutex);
   }
 
@@ -255,6 +224,68 @@ void EpubReaderActivity::loop() {
       xSemaphoreGive(renderingMutex);
     }
     updateRequired = true;
+  }
+}
+
+void EpubReaderActivity::onReaderMenuBack() {
+  exitActivity();
+  updateRequired = true;
+}
+
+void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action) {
+  switch (action) {
+    case EpubReaderMenuActivity::MenuAction::SELECT_CHAPTER: {
+      const int currentPage = section ? section->currentPage : 0;
+      const int totalPages = section ? section->pageCount : 0;
+
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      exitActivity();
+      enterNewActivity(new EpubReaderChapterSelectionActivity(
+          this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
+          [this] {
+            exitActivity();
+            updateRequired = true;
+          },
+          [this](int newSpineIndex) {
+            if (currentSpineIndex != newSpineIndex) {
+              currentSpineIndex = newSpineIndex;
+              nextPageNumber = 0;
+              section.reset();
+            }
+            exitActivity();
+            updateRequired = true;
+          },
+          [this](int newSpineIndex, int newPage) {
+            if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
+              currentSpineIndex = newSpineIndex;
+              nextPageNumber = newPage;
+              section.reset();
+            }
+            exitActivity();
+            updateRequired = true;
+          }));
+      xSemaphoreGive(renderingMutex);
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::SELECT_FOOTNOTES: {
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      exitActivity();
+      enterNewActivity(new EpubReaderFootnoteSelectionActivity(
+          this->renderer, this->mappedInput, currentPageFootnotes,
+          [this] {
+            exitActivity();
+            updateRequired = true;
+          },
+          [this](const char* href) {
+            navigateToHref(href, true);
+            exitActivity();
+            updateRequired = true;
+          }));
+      xSemaphoreGive(renderingMutex);
+      break;
+    }
+    default:
+      break;
   }
 }
 
@@ -351,7 +382,7 @@ void EpubReaderActivity::renderScreen() {
       auto progressSetup = [this, boxXWithBar, boxWidthWithBar, boxHeightWithBar, barX, barY] {
         renderer.fillRect(boxXWithBar, boxY, boxWidthWithBar, boxHeightWithBar, false);
         renderer.drawText(UI_12_FONT_ID, boxXWithBar + boxMargin, boxY + boxMargin, "Indexing...");
-        renderer.drawRect(boxXWithBar + 5, boxY + 5, boxWidthWithBar - 10, boxHeightWithBar - 10);
+        renderer.drawRect(boxXWithBar + 5, boxY + 5, boxWidthNoBar - 10, boxHeightNoBar - 10);
         renderer.drawRect(barX, barY, barWidth, barHeight);
         renderer.displayBuffer();
       };
@@ -672,10 +703,52 @@ void EpubReaderActivity::navigateToHref(const char* href, bool savePosition) {
     return;
   }
 
+  // Find target page for anchor if provided
+  int targetPage = 0;
+  if (!anchor.empty()) {
+    // If target is in current section, use its anchor map
+    if (targetSpineIndex == currentSpineIndex && section) {
+      int p = section->getPageForAnchor(anchor);
+      if (p != -1) {
+        targetPage = p;
+      }
+    } else {
+      // Create a temporary section to find the anchor
+      // We don't want to re-render, so only load if cache exists
+      Section tmpSection(epub, targetSpineIndex, renderer);
+      int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
+      renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
+                                       &orientedMarginLeft);
+      orientedMarginTop += SETTINGS.screenMargin;
+      orientedMarginLeft += SETTINGS.screenMargin;
+      orientedMarginRight += SETTINGS.screenMargin;
+      orientedMarginBottom += SETTINGS.screenMargin;
+
+      if (SETTINGS.statusBar != CrossPointSettings::STATUS_BAR_MODE::NONE) {
+        const bool showProgressBar = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR ||
+                                     SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::ONLY_PROGRESS_BAR;
+        orientedMarginBottom += statusBarMargin - SETTINGS.screenMargin +
+                                (showProgressBar ? (ScreenComponents::BOOK_PROGRESS_BAR_HEIGHT + progressBarMarginTop) : 0);
+      }
+
+      const int viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
+      const int viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
+
+      if (tmpSection.loadSectionFile(SETTINGS.getReaderFontId(), SETTINGS.getReaderLineCompression(),
+                                     SETTINGS.extraParagraphSpacing, SETTINGS.paragraphAlignment, viewportWidth,
+                                     viewportHeight, SETTINGS.hyphenationEnabled)) {
+        int p = tmpSection.getPageForAnchor(anchor);
+        if (p != -1) {
+          targetPage = p;
+        }
+      }
+    }
+  }
+
   // Navigate to the target chapter
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   currentSpineIndex = targetSpineIndex;
-  nextPageNumber = 0;
+  nextPageNumber = targetPage;
   section.reset();
   xSemaphoreGive(renderingMutex);
 

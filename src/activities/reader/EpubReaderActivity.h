@@ -5,6 +5,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 
+#include "EpubReaderMenuActivity.h"
 #include "FootnotesData.h"
 #include "activities/ActivityWithSubactivity.h"
 
@@ -33,6 +34,10 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
+
+  // Menu callbacks
+  void onReaderMenuBack();
+  void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
 
   // Footnote navigation methods
   void navigateToHref(const char* href, bool savePosition = false);
