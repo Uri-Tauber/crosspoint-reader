@@ -6,6 +6,7 @@
 #include <freertos/task.h>
 
 #include "EpubReaderMenuActivity.h"
+#include "FootnotesData.h"
 #include "activities/ActivityWithSubactivity.h"
 
 class EpubReaderActivity final : public ActivityWithSubactivity {
@@ -22,15 +23,24 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
   const std::function<void()> onGoBack;
   const std::function<void()> onGoHome;
 
+  FootnotesData currentPageFootnotes;
+  int savedSpineIndex = -1;
+  int savedPageNumber = -1;
+  bool isViewingFootnote = false;
+
   static void taskTrampoline(void* param);
   [[noreturn]] void displayTaskLoop();
   void renderScreen();
   void renderContents(std::unique_ptr<Page> page, int orientedMarginTop, int orientedMarginRight,
                       int orientedMarginBottom, int orientedMarginLeft);
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
-  void saveProgress(int spineIndex, int currentPage, int pageCount);
+
   void onReaderMenuBack();
   void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
+
+  // Footnote navigation methods
+  void navigateToHref(const char* href, bool savePosition = false);
+  void restoreSavedPosition();
 
  public:
   explicit EpubReaderActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, std::unique_ptr<Epub> epub,
