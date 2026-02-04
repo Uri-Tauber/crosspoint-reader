@@ -30,10 +30,10 @@ class ParsedText {
                                                   int spaceWidth, std::vector<uint16_t>& wordWidths);
   bool hyphenateWordAtIndex(size_t wordIndex, int availableWidth, const GfxRenderer& renderer, int fontId,
                             std::vector<uint16_t>& wordWidths, bool allowFallbackBreaks);
-  void extractLine(size_t breakIndex, int pageWidth, int spaceWidth, const std::vector<uint16_t>& wordWidths,
-                   const std::vector<size_t>& lineBreakIndices,
-                   const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>&
-                       processLine);
+  void extractLine(
+      size_t breakIndex, int pageWidth, int spaceWidth, const std::vector<uint16_t>& wordWidths,
+      const std::vector<size_t>& lineBreakIndices,
+      const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine);
   std::vector<uint16_t> calculateWordWidths(const GfxRenderer& renderer, int fontId);
 
  public:
@@ -47,8 +47,8 @@ class ParsedText {
   TextBlock::Style getStyle() const { return style; }
   size_t size() const { return words.size(); }
   bool isEmpty() const { return words.empty(); }
-  void layoutAndExtractLines(const GfxRenderer& renderer, int fontId, uint16_t viewportWidth,
-                             const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>&
-                                 processLine,
-                             bool includeLastLine = true);
+  void layoutAndExtractLines(
+      const GfxRenderer& renderer, int fontId, uint16_t viewportWidth,
+      const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine,
+      bool includeLastLine = true);
 };

@@ -64,10 +64,10 @@ void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle,
 }
 
 // Consumes data to minimize memory usage
-void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fontId, const uint16_t viewportWidth,
-                                       const std::function<void(std::shared_ptr<TextBlock>,
-                                                                const std::vector<FootnoteEntry>&)>& processLine,
-                                       const bool includeLastLine) {
+void ParsedText::layoutAndExtractLines(
+    const GfxRenderer& renderer, const int fontId, const uint16_t viewportWidth,
+    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine,
+    const bool includeLastLine) {
   if (words.empty()) {
     return;
   }
@@ -342,10 +342,10 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
   return true;
 }
 
-void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const int spaceWidth,
-                             const std::vector<uint16_t>& wordWidths, const std::vector<size_t>& lineBreakIndices,
-                             const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>&
-                                 processLine) {
+void ParsedText::extractLine(
+    const size_t breakIndex, const int pageWidth, const int spaceWidth, const std::vector<uint16_t>& wordWidths,
+    const std::vector<size_t>& lineBreakIndices,
+    const std::function<void(std::shared_ptr<TextBlock>, const std::vector<FootnoteEntry>&)>& processLine) {
   const size_t lineBreak = lineBreakIndices[breakIndex];
   const size_t lastBreakAt = breakIndex > 0 ? lineBreakIndices[breakIndex - 1] : 0;
   const size_t lineWordCount = lineBreak - lastBreakAt;

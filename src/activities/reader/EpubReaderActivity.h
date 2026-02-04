@@ -35,6 +35,8 @@ class EpubReaderActivity final : public ActivityWithSubactivity {
                       int orientedMarginBottom, int orientedMarginLeft);
   void renderStatusBar(int orientedMarginRight, int orientedMarginBottom, int orientedMarginLeft) const;
   void saveProgress(int spineIndex, int currentPage, int pageCount);
+  void onReaderMenuBack();
+  void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
 
   // Footnote navigation methods
   void navigateToHref(const char* href, bool savePosition = false);

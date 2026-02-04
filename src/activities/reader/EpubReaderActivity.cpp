@@ -55,6 +55,7 @@ void EpubReaderActivity::onEnter() {
   }
 
   renderingMutex = xSemaphoreCreateMutex();
+
   epub->setupCacheDir();
 
   FsFile f;
@@ -124,73 +125,16 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // Enter chapter selection activity or menu
+  // Enter chapter selection activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     // Don't start activity transition while rendering
     xSemaphoreTake(renderingMutex, portMAX_DELAY);
     const int currentPage = section ? section->currentPage : 0;
     const int totalPages = section ? section->pageCount : 0;
-
-    // Show menu instead of direct chapter selection, to allow access to footnotes
     exitActivity();
     enterNewActivity(new EpubReaderMenuActivity(
-        this->renderer, this->mappedInput,
-        [this] {
-          // onGoBack from menu
-          updateRequired = true;
-          // Re-enter reader activity logic if needed (handled by stack)
-          // Actually ActivityWithSubactivity handles subActivity exit naturally
-          exitActivity();
-        },
-        [this, currentPage, totalPages](EpubReaderMenuActivity::MenuOption option) {
-          // onSelectOption - handle menu choice
-          if (option == EpubReaderMenuActivity::CHAPTERS) {
-            // Show chapter selection
-            exitActivity();
-            enterNewActivity(new EpubReaderChapterSelectionActivity(
-                this->renderer, this->mappedInput, epub, epub->getPath(), currentSpineIndex, currentPage, totalPages,
-                [this] {
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](int newSpineIndex) {
-                  if (currentSpineIndex != newSpineIndex) {
-                    currentSpineIndex = newSpineIndex;
-                    nextPageNumber = 0;
-                    section.reset();
-                  }
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](int newSpineIndex, int newPage) {
-                  // Handle sync position
-                  if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
-                    currentSpineIndex = newSpineIndex;
-                    nextPageNumber = newPage;
-                    section.reset();
-                  }
-                  exitActivity();
-                  updateRequired = true;
-                }));
-          } else if (option == EpubReaderMenuActivity::FOOTNOTES) {
-            // Show footnotes page with current page notes
-            exitActivity();
-            enterNewActivity(new EpubReaderFootnotesActivity(
-                this->renderer, this->mappedInput,
-                currentPageFootnotes,  // Pass collected footnotes (reference)
-                [this] {
-                  // onGoBack from footnotes
-                  exitActivity();
-                  updateRequired = true;
-                },
-                [this](const char* href) {
-                  // onSelectFootnote - navigate to the footnote location
-                  navigateToHref(href, true);  // true = save current position
-                  exitActivity();
-                  updateRequired = true;
-                }));
-          }
-        }));
+        this->renderer, this->mappedInput, epub->getTitle(), [this]() { onReaderMenuBack(); },
+        [this](EpubReaderMenuActivity::MenuAction action) { onReaderMenuConfirm(action); }));
     xSemaphoreGive(renderingMutex);
   }
 
@@ -230,7 +174,7 @@ void EpubReaderActivity::loop() {
     return;
   }
 
-  // any button press when at end of the book goes back to the last page
+  // any botton press when at end of the book goes back to the last page
   if (currentSpineIndex > 0 && currentSpineIndex >= epub->getSpineItemsCount()) {
     currentSpineIndex = epub->getSpineItemsCount() - 1;
     nextPageNumber = UINT16_MAX;
@@ -284,6 +228,108 @@ void EpubReaderActivity::loop() {
   }
 }
 
+void EpubReaderActivity::onReaderMenuBack() {
+  exitActivity();
+  updateRequired = true;
+}
+
+void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action) {
+  switch (action) {
+    case EpubReaderMenuActivity::MenuAction::SELECT_CHAPTER: {
+      // Calculate values BEFORE we start destroying things
+      const int currentP = section ? section->currentPage : 0;
+      const int totalP = section ? section->pageCount : 0;
+      const int spineIdx = currentSpineIndex;
+      const std::string path = epub->getPath();
+
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+
+      // 1. Close the menu
+      exitActivity();
+
+      // 2. Open the Chapter Selector
+      enterNewActivity(new EpubReaderChapterSelectionActivity(
+          this->renderer, this->mappedInput, epub, path, spineIdx, currentP, totalP,
+          [this] {
+            exitActivity();
+            updateRequired = true;
+          },
+          [this](const int newSpineIndex) {
+            if (currentSpineIndex != newSpineIndex) {
+              currentSpineIndex = newSpineIndex;
+              nextPageNumber = 0;
+              section.reset();
+            }
+            exitActivity();
+            updateRequired = true;
+          },
+          [this](const int newSpineIndex, const int newPage) {
+            if (currentSpineIndex != newSpineIndex || (section && section->currentPage != newPage)) {
+              currentSpineIndex = newSpineIndex;
+              nextPageNumber = newPage;
+              section.reset();
+            }
+            exitActivity();
+            updateRequired = true;
+          }));
+
+      xSemaphoreGive(renderingMutex);
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::FOOTNOTES: {
+      // Show footnotes page with current page notes
+      exitActivity();
+      enterNewActivity(new EpubReaderFootnotesActivity(
+          this->renderer, this->mappedInput,
+          currentPageFootnotes,  // Pass collected footnotes (reference)
+          [this] {
+            // onGoBack from footnotes
+            exitActivity();
+            updateRequired = true;
+          },
+          [this](const char* href) {
+            // onSelectFootnote - navigate to the footnote location
+            navigateToHref(href, true);  // true = save current position
+            exitActivity();
+            updateRequired = true;
+          }));
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::GO_HOME: {
+      // 2. Trigger the reader's "Go Home" callback
+      if (onGoHome) {
+        onGoHome();
+      }
+
+      break;
+    }
+    case EpubReaderMenuActivity::MenuAction::DELETE_CACHE: {
+      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      if (epub) {
+        // 2. BACKUP: Read current progress
+        // We use the current variables that track our position
+        uint16_t backupSpine = currentSpineIndex;
+        uint16_t backupPage = section->currentPage;
+        uint16_t backupPageCount = section->pageCount;
+
+        section.reset();
+        // 3. WIPE: Clear the cache directory
+        epub->clearCache();
+
+        // 4. RESTORE: Re-setup the directory and rewrite the progress file
+        epub->setupCacheDir();
+
+        saveProgress(backupSpine, backupPage, backupPageCount);
+      }
+      exitActivity();
+      updateRequired = true;
+      xSemaphoreGive(renderingMutex);
+      if (onGoHome) onGoHome();
+      break;
+    }
+  }
+}
+
 void EpubReaderActivity::displayTaskLoop() {
   while (true) {
     if (updateRequired) {
@@ -296,16 +342,17 @@ void EpubReaderActivity::displayTaskLoop() {
   }
 }
 
+// TODO: Failure handling
 void EpubReaderActivity::renderScreen() {
   if (!epub) {
     return;
   }
 
-  // Edge case handling for sub-zero spine index
+  // edge case handling for sub-zero spine index
   if (currentSpineIndex < 0) {
     currentSpineIndex = 0;
   }
-  // Based bounds of book, show end of book screen
+  // based bounds of book, show end of book screen
   if (currentSpineIndex > epub->getSpineItemsCount()) {
     currentSpineIndex = epub->getSpineItemsCount();
   }
@@ -487,7 +534,6 @@ void EpubReaderActivity::renderContents(std::unique_ptr<Page> page, const int or
 
 void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const int orientedMarginBottom,
                                          const int orientedMarginLeft) const {
-  int progressTextWidth = 0;
   // determine visible status bar elements
   const bool showProgressPercentage = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL;
   const bool showProgressBar = SETTINGS.statusBar == CrossPointSettings::STATUS_BAR_MODE::FULL_WITH_PROGRESS_BAR ||
@@ -506,6 +552,7 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
   // Position status bar near the bottom of the logical screen, regardless of orientation
   const auto screenHeight = renderer.getScreenHeight();
   const auto textY = screenHeight - orientedMarginBottom - 4;
+  int progressTextWidth = 0;
 
   // Calculate progress in book
   const float sectionChapterProg = static_cast<float>(section->currentPage) / section->pageCount;
@@ -533,7 +580,6 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
     ScreenComponents::drawBookProgressBar(renderer, static_cast<size_t>(bookProgress));
   }
 
-  // Left aligned battery icon and percentage
   if (showBattery) {
     ScreenComponents::drawBattery(renderer, orientedMarginLeft + 1, textY, showBatteryPercentage);
   }
@@ -543,7 +589,6 @@ void EpubReaderActivity::renderStatusBar(const int orientedMarginRight, const in
     // Page width minus existing content with 30px padding on each side
     const int rendererableScreenWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
 
-    // int progressTextWidth = 0; // Moved to top scope
     const int batterySize = showBattery ? (showBatteryPercentage ? 50 : 20) : 0;
     const int titleMarginLeft = batterySize + 30;
     const int titleMarginRight = progressTextWidth + 30;

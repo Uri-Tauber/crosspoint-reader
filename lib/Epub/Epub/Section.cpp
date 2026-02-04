@@ -181,8 +181,7 @@ bool Section::clearCache() const {
 bool Section::createSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
                                 const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                 const uint16_t viewportHeight, const bool hyphenationEnabled,
-                                const std::function<void()>& progressSetupFn,
-                                const std::function<void(int)>& progressFn) {
+                                const std::function<void()>& progressSetupFn, const std::function<void(int)>& popupFn) {
   constexpr uint32_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
 
   BookMetadataCache::SpineEntry spineEntry = epub->getSpineItem(spineIndex);
@@ -246,8 +245,7 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
   std::unique_ptr<ChapterHtmlSlimParser> visitor(new ChapterHtmlSlimParser(
       fileToParse, renderer, fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
       viewportHeight, hyphenationEnabled,
-      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); },
-      progressFn));
+      [this, &lut](std::unique_ptr<Page> page) { lut.emplace_back(this->onPageComplete(std::move(page))); }, popupFn));
 
   Hyphenator::setPreferredLanguage(epub->getLanguage());
 

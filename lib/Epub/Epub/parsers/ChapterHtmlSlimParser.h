@@ -51,7 +51,7 @@ class ChapterHtmlSlimParser {
   const std::string& filepath;
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
-  std::function<void(int)> progressFn;  // Progress callback (0-100)
+  std::function<void(int)> popupFn;  // Popup callback
   int depth = 0;
   int skipUntilDepth = INT_MAX;
   int boldUntilDepth = INT_MAX;
@@ -128,7 +128,7 @@ class ChapterHtmlSlimParser {
                                  const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                  const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::function<void(int)>& progressFn = nullptr)
+                                 const std::function<void(int)>& popupFn = nullptr)
       : filepath(filepath),
         renderer(renderer),
         completePageFn(completePageFn),
@@ -139,7 +139,7 @@ class ChapterHtmlSlimParser {
         viewportWidth(viewportWidth),
         viewportHeight(viewportHeight),
         hyphenationEnabled(hyphenationEnabled),
-        progressFn(progressFn),
+        popupFn(popupFn),
         inlineFootnoteCount(0) {
     // Initialize all footnote pointers to null
     for (int i = 0; i < 16; i++) {

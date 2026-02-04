@@ -816,11 +816,11 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     // Update progress (call every 10% change to avoid too frequent updates)
     // Only show progress for larger chapters where rendering overhead is worth it
     bytesRead += len;
-    if (progressFn && totalSize >= MIN_SIZE_FOR_PROGRESS) {
+    if (popupFn && totalSize >= MIN_SIZE_FOR_PROGRESS) {
       const int progress = static_cast<int>((bytesRead * 100) / totalSize);
       if (lastProgress / 10 != progress / 10) {
         lastProgress = progress;
-        progressFn(progress);
+        popupFn(progress);
       }
     }
 

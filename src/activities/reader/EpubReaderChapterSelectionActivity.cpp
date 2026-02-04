@@ -82,13 +82,6 @@ void EpubReaderChapterSelectionActivity::onEnter() {
     }
   }
 
-  // Account for sync option offset when finding current TOC index (if applicable)
-  // For simplicity, if we are using the filtered list, we might just put "Sync" at the top of THAT list?
-  // But wait, the filtered list is spine indices.
-  // The master logic used TOC indices directly.
-  // Let's adapt: We will display the filtered list.
-  // If sync is enabled, we prepend/append it to the selector range.
-
   if (hasSyncOption()) {
     selectorIndex += 1;  // Offset for top sync option
   }
@@ -254,7 +247,7 @@ void EpubReaderChapterSelectionActivity::renderScreen() {
   // Skip button hints in landscape CW mode (they overlap content)
   if (renderer.getOrientation() != GfxRenderer::LandscapeClockwise) {
     const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");
-  renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    renderer.drawButtonHints(UI_10_FONT_ID, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   }
 
   renderer.displayBuffer();

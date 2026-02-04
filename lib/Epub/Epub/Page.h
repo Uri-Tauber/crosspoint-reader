@@ -10,6 +10,7 @@ enum PageElementTag : uint8_t {
   TAG_PageLine = 1,
 };
 
+// represents something that has been added to a page
 class PageElement {
  public:
   int16_t xPos;
@@ -20,6 +21,7 @@ class PageElement {
   virtual bool serialize(FsFile& file) = 0;
 };
 
+// a line from a block element
 class PageLine final : public PageElement {
   std::shared_ptr<TextBlock> block;
 
