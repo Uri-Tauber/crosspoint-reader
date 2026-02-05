@@ -181,8 +181,7 @@ bool Section::clearCache() const {
 bool Section::createSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
                                 const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                 const uint16_t viewportHeight, const bool hyphenationEnabled,
-                                const std::function<void()>& progressSetupFn, const std::function<void(int)>& popupFn) {
-  constexpr uint32_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
+                                const std::function<void()>& popupFn) {
 
   BookMetadataCache::SpineEntry spineEntry = epub->getSpineItem(spineIndex);
   const std::string localPath = spineEntry.href;
@@ -228,11 +227,6 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
       Serial.printf("[%lu] [SCT] Failed to stream item contents\n", millis());
       return false;
     }
-  }
-
-  // Only show progress bar for larger chapters
-  if (progressSetupFn && fileSize >= MIN_SIZE_FOR_PROGRESS) {
-    progressSetupFn();
   }
 
   if (!SdMan.openFileForWrite("SCT", filePath, file)) {

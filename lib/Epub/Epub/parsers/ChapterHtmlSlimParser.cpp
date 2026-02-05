@@ -10,8 +10,8 @@
 const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
 constexpr int NUM_HEADER_TAGS = sizeof(HEADER_TAGS) / sizeof(HEADER_TAGS[0]);
 
-// Minimum file size (in bytes) to show progress bar - smaller chapters don't benefit from it
-constexpr size_t MIN_SIZE_FOR_PROGRESS = 50 * 1024;  // 50KB
+// Minimum file size (in bytes) to show indexing popup - smaller chapters don't benefit from it
+constexpr size_t MIN_SIZE_FOR_POPUP = 50 * 1024;  // 50KB
 
 const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote"};
 constexpr int NUM_BLOCK_TAGS = sizeof(BLOCK_TAGS) / sizeof(BLOCK_TAGS[0]);
@@ -30,6 +30,7 @@ constexpr int NUM_SKIP_TAGS = sizeof(SKIP_TAGS) / sizeof(SKIP_TAGS[0]);
 
 bool isWhitespace(const char c) { return c == ' ' || c == '\r' || c == '\n' || c == '\t'; }
 
+// given the start and end of a tag, check to see if it matches a known tag
 bool matches(const char* tag_name, const char* possible_tags[], const int possible_tag_count) {
   for (int i = 0; i < possible_tag_count; i++) {
     if (strcmp(tag_name, possible_tags[i]) == 0) {
@@ -787,10 +788,10 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
     return false;
   }
 
-  // Get file size for progress calculation
-  const size_t totalSize = file.size();
-  size_t bytesRead = 0;
-  int lastProgress = -1;
+  // Get file size to decide whether to show indexing popup.
+  if (popupFn && file.size() >= MIN_SIZE_FOR_POPUP) {
+    popupFn();
+  }
 
   do {
     void* const buf = XML_GetBuffer(parser2, 1024);
@@ -813,16 +814,6 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
       return false;
     }
 
-    // Update progress (call every 10% change to avoid too frequent updates)
-    // Only show progress for larger chapters where rendering overhead is worth it
-    bytesRead += len;
-    if (popupFn && totalSize >= MIN_SIZE_FOR_PROGRESS) {
-      const int progress = static_cast<int>((bytesRead * 100) / totalSize);
-      if (lastProgress / 10 != progress / 10) {
-        lastProgress = progress;
-        popupFn(progress);
-      }
-    }
 
     done = file.available() == 0;
 

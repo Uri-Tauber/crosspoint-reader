@@ -51,11 +51,13 @@ class ChapterHtmlSlimParser {
   const std::string& filepath;
   GfxRenderer& renderer;
   std::function<void(std::unique_ptr<Page>)> completePageFn;
-  std::function<void(int)> popupFn;  // Popup callback
+  std::function<void()> popupFn;  // Popup callback
   int depth = 0;
   int skipUntilDepth = INT_MAX;
   int boldUntilDepth = INT_MAX;
   int italicUntilDepth = INT_MAX;
+  // buffer for building up words from characters, will auto break if longer than this
+  // leave one char at end for null pointer
   char partWordBuffer[MAX_WORD_SIZE + 1] = {};
   int partWordBufferIndex = 0;
   std::unique_ptr<ParsedText> currentTextBlock = nullptr;
@@ -128,7 +130,7 @@ class ChapterHtmlSlimParser {
                                  const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                                  const uint16_t viewportHeight, const bool hyphenationEnabled,
                                  const std::function<void(std::unique_ptr<Page>)>& completePageFn,
-                                 const std::function<void(int)>& popupFn = nullptr)
+                                 const std::function<void()>& popupFn = nullptr)
       : filepath(filepath),
         renderer(renderer),
         completePageFn(completePageFn),
