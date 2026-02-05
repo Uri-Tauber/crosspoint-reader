@@ -1,6 +1,7 @@
 #include "MyLibraryActivity.h"
 
 #include <GfxRenderer.h>
+#include <I18n.h>
 #include <SDCardManager.h>
 
 #include "MappedInputManager.h"
@@ -197,7 +198,7 @@ void MyLibraryActivity::render() const {
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
   if (files.empty()) {
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, "No books found");
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, TR(NO_BOOKS_FOUND));
   } else {
     GUI.drawList(
         renderer, Rect{0, contentTop, pageWidth, contentHeight}, files.size(), selectorIndex,
@@ -205,7 +206,7 @@ void MyLibraryActivity::render() const {
   }
 
   // Help text
-  const auto labels = mappedInput.mapLabels("« Home", "Open", "Up", "Down");
+  const auto labels = mappedInput.mapLabels(TR(HOME), TR(OPEN), TR(DIR_UP), TR(DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
