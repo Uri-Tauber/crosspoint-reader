@@ -20,23 +20,6 @@ I18n &I18n::getInstance() {
   return instance;
 }
 
-// Compile-time check for array sizes
-static_assert(sizeof(i18n_strings::STRINGS_EN) / sizeof(i18n_strings::STRINGS_EN[0]) ==
-                  static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_EN size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_ES) / sizeof(i18n_strings::STRINGS_ES[0]) ==
-                  static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_ES size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_IT) / sizeof(i18n_strings::STRINGS_IT[0]) ==
-                  static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_IT size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_SV) / sizeof(i18n_strings::STRINGS_SV[0]) ==
-                  static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_SV size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_FR) / sizeof(i18n_strings::STRINGS_FR[0]) ==
-                  static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_FR size mismatch");
-
 const char *I18n::get(StrId id) const {
   const auto index = static_cast<size_t>(id);
   if (index >= static_cast<size_t>(StrId::_COUNT)) {

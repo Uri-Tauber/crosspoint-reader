@@ -37,14 +37,15 @@ const SettingInfo displaySettings[displaySettingsCount] = {
     SettingInfo::Toggle(StrId::SUNLIGHT_FADING_FIX, &CrossPointSettings::fadingFix),
 };
 
-constexpr int readerSettingsCount = 9;
+constexpr int readerSettingsCount = 10;
 const SettingInfo readerSettings[readerSettingsCount] = {
     SettingInfo::Enum(StrId::FONT_FAMILY, &CrossPointSettings::fontFamily, {StrId::BOOKERLY, StrId::NOTO_SANS, StrId::OPEN_DYSLEXIC}),
     SettingInfo::Enum(StrId::FONT_SIZE, &CrossPointSettings::fontSize, {StrId::SMALL, StrId::MEDIUM, StrId::LARGE, StrId::X_LARGE}),
     SettingInfo::Enum(StrId::LINE_SPACING, &CrossPointSettings::lineSpacing, {StrId::TIGHT, StrId::NORMAL, StrId::WIDE}),
     SettingInfo::Value(StrId::SCREEN_MARGIN, &CrossPointSettings::screenMargin, {5, 40, 5}),
     SettingInfo::Enum(StrId::PARA_ALIGNMENT, &CrossPointSettings::paragraphAlignment,
-                      {StrId::JUSTIFY, StrId::ALIGN_LEFT, StrId::CENTER, StrId::ALIGN_RIGHT}),
+                      {StrId::JUSTIFY, StrId::ALIGN_LEFT, StrId::CENTER, StrId::ALIGN_RIGHT, StrId::BOOK_S_STYLE}),
+                      SettingInfo::Toggle(StrId::EMBEDDED_STYLE, &CrossPointSettings::embeddedStyle), 
     SettingInfo::Toggle(StrId::HYPHENATION, &CrossPointSettings::hyphenationEnabled),
     SettingInfo::Enum(StrId::ORIENTATION, &CrossPointSettings::orientation,
                       {StrId::PORTRAIT, StrId::LANDSCAPE_CW, StrId::INVERTED, StrId::LANDSCAPE_CCW}),

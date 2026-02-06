@@ -366,7 +366,8 @@ enum class StrId : uint16_t {
   SYNC_FAILED_MSG,     // "Sync failed"
   SECTION_PREFIX,      // "Section "
   UPLOAD,              // "Upload"
-
+  BOOK_S_STYLE,
+  EMBEDDED_STYLE,      // "Embedded Style"
   // Sentinel - must be last
   _COUNT
 };
