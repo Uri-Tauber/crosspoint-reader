@@ -1,5 +1,4 @@
 #include "I18n.h"
-#include "I18nStrings.h"
 
 #include <HardwareSerial.h>
 #include <SDCardManager.h>
@@ -9,35 +8,37 @@
 #include <set>
 #include <string>
 
+#include "I18nStrings.h"
+
 using namespace i18n_strings;
 
 // Settings file path
-static constexpr const char *SETTINGS_FILE = "/.crosspoint/language.bin";
+static constexpr const char* SETTINGS_FILE = "/.crosspoint/language.bin";
 static constexpr uint8_t SETTINGS_VERSION = 1;
 
-I18n &I18n::getInstance() {
+I18n& I18n::getInstance() {
   static I18n instance;
   return instance;
 }
 
-const char *I18n::get(StrId id) const {
+const char* I18n::get(StrId id) const {
   const auto index = static_cast<size_t>(id);
   if (index >= static_cast<size_t>(StrId::_COUNT)) {
     return "???";
   }
 
   switch (_language) {
-  case Language::SPANISH:
-    return i18n_strings::STRINGS_ES[index];
-  case Language::ITALIAN:
-    return i18n_strings::STRINGS_IT[index];
-  case Language::SWEDISH:
-    return i18n_strings::STRINGS_SV[index];
-  case Language::FRENCH:
-    return i18n_strings::STRINGS_FR[index];
-  case Language::ENGLISH:
-  default:
-    return i18n_strings::STRINGS_EN[index];
+    case Language::SPANISH:
+      return i18n_strings::STRINGS_ES[index];
+    case Language::ITALIAN:
+      return i18n_strings::STRINGS_IT[index];
+    case Language::SWEDISH:
+      return i18n_strings::STRINGS_SV[index];
+    case Language::FRENCH:
+      return i18n_strings::STRINGS_FR[index];
+    case Language::ENGLISH:
+    default:
+      return i18n_strings::STRINGS_EN[index];
   }
 }
 
@@ -62,8 +63,7 @@ void I18n::saveSettings() {
   serialization::writePod(file, static_cast<uint8_t>(_language));
 
   file.close();
-  Serial.printf("[I18N] Settings saved: language=%d\n",
-                static_cast<int>(_language));
+  Serial.printf("[I18N] Settings saved: language=%d\n", static_cast<int>(_language));
 }
 
 void I18n::loadSettings() {
@@ -92,38 +92,38 @@ void I18n::loadSettings() {
 }
 
 // Generate character set for a specific language
-const char *I18n::getCharacterSet(Language lang) {
+const char* I18n::getCharacterSet(Language lang) {
   static std::string charsetEN;
   static std::string charsetES;
   static std::string charsetIT;
   static std::string charsetSV;
   static std::string charsetFR;
 
-  const char *const *strings;
-  std::string *charset;
+  const char* const* strings;
+  std::string* charset;
 
   switch (lang) {
-  case Language::SPANISH:
-    strings = i18n_strings::STRINGS_ES;
-    charset = &charsetES;
-    break;
-  case Language::ITALIAN:
-    strings = i18n_strings::STRINGS_IT;
-    charset = &charsetIT;
-    break;
-  case Language::SWEDISH:
-    strings = i18n_strings::STRINGS_SV;
-    charset = &charsetSV;
-    break;
-  case Language::FRENCH:
-    strings = i18n_strings::STRINGS_FR;
-    charset = &charsetFR;
-    break;
-  case Language::ENGLISH:
-  default:
-    strings = i18n_strings::STRINGS_EN;
-    charset = &charsetEN;
-    break;
+    case Language::SPANISH:
+      strings = i18n_strings::STRINGS_ES;
+      charset = &charsetES;
+      break;
+    case Language::ITALIAN:
+      strings = i18n_strings::STRINGS_IT;
+      charset = &charsetIT;
+      break;
+    case Language::SWEDISH:
+      strings = i18n_strings::STRINGS_SV;
+      charset = &charsetSV;
+      break;
+    case Language::FRENCH:
+      strings = i18n_strings::STRINGS_FR;
+      charset = &charsetFR;
+      break;
+    case Language::ENGLISH:
+    default:
+      strings = i18n_strings::STRINGS_EN;
+      charset = &charsetEN;
+      break;
   }
 
   // Only generate once
@@ -135,7 +135,7 @@ const char *I18n::getCharacterSet(Language lang) {
 
   // Iterate through all strings
   for (size_t i = 0; i < static_cast<size_t>(StrId::_COUNT); i++) {
-    const char *str = strings[i];
+    const char* str = strings[i];
     while (*str) {
       // Decode UTF-8
       uint32_t cp = 0;
@@ -164,7 +164,7 @@ const char *I18n::getCharacterSet(Language lang) {
         cp |= (static_cast<uint8_t>(str[3]) & 0x3F);
         str += 4;
       } else {
-        str++; // Invalid byte, skip
+        str++;  // Invalid byte, skip
         continue;
       }
 

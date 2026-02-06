@@ -263,7 +263,8 @@ void HomeActivity::render() {
                           std::bind(&HomeActivity::storeCoverBuffer, this));
 
   // Build menu items dynamically
-  std::vector<const char*> menuItems = {i18n(BROWSE_FILES), i18n(MENU_RECENT_BOOKS), i18n(FILE_TRANSFER), i18n(SETTINGS_TITLE)};
+  std::vector<const char*> menuItems = {i18n(BROWSE_FILES), i18n(MENU_RECENT_BOOKS), i18n(FILE_TRANSFER),
+                                        i18n(SETTINGS_TITLE)};
   if (hasOpdsUrl) {
     // Insert OPDS Browser after My Library
     menuItems.insert(menuItems.begin() + 2, i18n(OPDS_BROWSER));

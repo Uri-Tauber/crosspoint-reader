@@ -14,8 +14,8 @@
 
 namespace {
 constexpr int MENU_ITEMS = 5;
-const StrId menuNames[MENU_ITEMS] = {StrId::USERNAME, StrId::PASSWORD, StrId::SYNC_SERVER_URL,
-                                     StrId::DOCUMENT_MATCHING, StrId::AUTHENTICATE};
+const StrId menuNames[MENU_ITEMS] = {StrId::USERNAME, StrId::PASSWORD, StrId::SYNC_SERVER_URL, StrId::DOCUMENT_MATCHING,
+                                     StrId::AUTHENTICATE};
 }  // namespace
 
 void KOReaderSettingsActivity::taskTrampoline(void* param) {
@@ -199,7 +199,8 @@ void KOReaderSettingsActivity::render() {
     } else if (i == 2) {
       status = std::string("[") + (KOREADER_STORE.getServerUrl().empty() ? i18n(DEFAULT_VALUE) : i18n(CUSTOM)) + "]";
     } else if (i == 3) {
-      status = std::string("[") + (KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME ? i18n(FILENAME) : i18n(BINARY)) + "]";
+      status = std::string("[") +
+               (KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME ? i18n(FILENAME) : i18n(BINARY)) + "]";
     } else if (i == 4) {
       status = KOREADER_STORE.hasCredentials() ? "" : std::string("[") + i18n(SET_CREDENTIALS_FIRST) + "]";
     }

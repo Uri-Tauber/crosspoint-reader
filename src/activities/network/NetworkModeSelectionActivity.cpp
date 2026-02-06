@@ -107,7 +107,8 @@ void NetworkModeSelectionActivity::render() const {
   renderer.drawCenteredText(UI_10_FONT_ID, 50, i18n(HOW_CONNECT));
 
   // Menu items and descriptions
-  static constexpr StrId menuItems[MENU_ITEM_COUNT] = {StrId::JOIN_NETWORK, StrId::CALIBRE_WIRELESS, StrId::CREATE_HOTSPOT};
+  static constexpr StrId menuItems[MENU_ITEM_COUNT] = {StrId::JOIN_NETWORK, StrId::CALIBRE_WIRELESS,
+                                                       StrId::CREATE_HOTSPOT};
   static constexpr StrId menuDescs[MENU_ITEM_COUNT] = {StrId::JOIN_DESC, StrId::CALIBRE_DESC, StrId::HOTSPOT_DESC};
 
   // Draw menu items centered on screen

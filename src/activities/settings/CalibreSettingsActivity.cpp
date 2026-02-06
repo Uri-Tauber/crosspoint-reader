@@ -173,11 +173,14 @@ void CalibreSettingsActivity::render() {
     // Draw status for each setting
     std::string status = std::string("[") + i18n(NOT_SET) + "]";
     if (i == 0) {
-      status = (strlen(SETTINGS.opdsServerUrl) > 0) ? std::string("[") + i18n(SET) + "]" : std::string("[") + i18n(NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsServerUrl) > 0) ? std::string("[") + i18n(SET) + "]"
+                                                    : std::string("[") + i18n(NOT_SET) + "]";
     } else if (i == 1) {
-      status = (strlen(SETTINGS.opdsUsername) > 0) ? std::string("[") + i18n(SET) + "]" : std::string("[") + i18n(NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsUsername) > 0) ? std::string("[") + i18n(SET) + "]"
+                                                   : std::string("[") + i18n(NOT_SET) + "]";
     } else if (i == 2) {
-      status = (strlen(SETTINGS.opdsPassword) > 0) ? std::string("[") + i18n(SET) + "]" : std::string("[") + i18n(NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsPassword) > 0) ? std::string("[") + i18n(SET) + "]"
+                                                   : std::string("[") + i18n(NOT_SET) + "]";
     }
     const auto width = renderer.getTextWidth(UI_10_FONT_ID, status.c_str());
     renderer.drawText(UI_10_FONT_ID, pageWidth - 20 - width, settingY, status.c_str(), !isSelected);

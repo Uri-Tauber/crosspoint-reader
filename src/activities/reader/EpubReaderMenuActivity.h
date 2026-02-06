@@ -1,9 +1,9 @@
 #pragma once
 #include <Epub.h>
+#include <I18n.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
-#include <I18n.h>
 
 #include <functional>
 #include <string>
@@ -40,10 +40,12 @@ class EpubReaderMenuActivity final : public ActivityWithSubactivity {
   };
 
   // Fixed menu layout (order matters for up/down navigation).
-  const std::vector<MenuItem> menuItems = {
-      {MenuAction::SELECT_CHAPTER, StrId::SELECT_CHAPTER}, {MenuAction::ROTATE_SCREEN, StrId::ORIENTATION},
-      {MenuAction::GO_TO_PERCENT, StrId::GO_TO_PERCENT},   {MenuAction::GO_HOME, StrId::GO_HOME_BUTTON},
-      {MenuAction::SYNC, StrId::SYNC_PROGRESS},            {MenuAction::DELETE_CACHE, StrId::DELETE_CACHE}};
+  const std::vector<MenuItem> menuItems = {{MenuAction::SELECT_CHAPTER, StrId::SELECT_CHAPTER},
+                                           {MenuAction::ROTATE_SCREEN, StrId::ORIENTATION},
+                                           {MenuAction::GO_TO_PERCENT, StrId::GO_TO_PERCENT},
+                                           {MenuAction::GO_HOME, StrId::GO_HOME_BUTTON},
+                                           {MenuAction::SYNC, StrId::SYNC_PROGRESS},
+                                           {MenuAction::DELETE_CACHE, StrId::DELETE_CACHE}};
 
   int selectedIndex = 0;
   bool updateRequired = false;

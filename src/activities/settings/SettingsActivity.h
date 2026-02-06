@@ -1,4 +1,5 @@
 #pragma once
+#include <I18n.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -6,8 +7,6 @@
 #include <functional>
 #include <string>
 #include <vector>
-
-#include <I18n.h>
 
 #include "activities/ActivityWithSubactivity.h"
 

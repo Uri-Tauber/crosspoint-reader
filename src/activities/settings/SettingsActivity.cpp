@@ -8,9 +8,9 @@
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
 #include "KOReaderSettingsActivity.h"
+#include "LanguageSelectActivity.h"
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
-#include "LanguageSelectActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -27,10 +27,11 @@ const SettingInfo displaySettings[displaySettingsCount] = {
     SettingInfo::Enum(StrId::SLEEP_COVER_MODE, &CrossPointSettings::sleepScreenCoverMode, {StrId::FIT, StrId::CROP}),
     SettingInfo::Enum(StrId::SLEEP_COVER_FILTER, &CrossPointSettings::sleepScreenCoverFilter,
                       {StrId::NONE_OPT, StrId::FILTER_CONTRAST, StrId::INVERTED}),
-    SettingInfo::Enum(
-        StrId::STATUS_BAR, &CrossPointSettings::statusBar,
-        {StrId::NONE_OPT, StrId::NO_PROGRESS, StrId::STATUS_BAR_FULL_PERCENT, StrId::STATUS_BAR_FULL_BOOK, StrId::STATUS_BAR_BOOK_ONLY, StrId::STATUS_BAR_FULL_CHAPTER}),
-    SettingInfo::Enum(StrId::HIDE_BATTERY, &CrossPointSettings::hideBatteryPercentage, {StrId::NEVER, StrId::IN_READER, StrId::ALWAYS}),
+    SettingInfo::Enum(StrId::STATUS_BAR, &CrossPointSettings::statusBar,
+                      {StrId::NONE_OPT, StrId::NO_PROGRESS, StrId::STATUS_BAR_FULL_PERCENT, StrId::STATUS_BAR_FULL_BOOK,
+                       StrId::STATUS_BAR_BOOK_ONLY, StrId::STATUS_BAR_FULL_CHAPTER}),
+    SettingInfo::Enum(StrId::HIDE_BATTERY, &CrossPointSettings::hideBatteryPercentage,
+                      {StrId::NEVER, StrId::IN_READER, StrId::ALWAYS}),
     SettingInfo::Enum(StrId::REFRESH_FREQ, &CrossPointSettings::refreshFrequency,
                       {StrId::PAGES_1, StrId::PAGES_5, StrId::PAGES_10, StrId::PAGES_15, StrId::PAGES_30}),
     SettingInfo::Enum(StrId::UI_THEME, &CrossPointSettings::uiTheme, {StrId::THEME_CLASSIC, StrId::THEME_LYRA}),
@@ -39,13 +40,16 @@ const SettingInfo displaySettings[displaySettingsCount] = {
 
 constexpr int readerSettingsCount = 10;
 const SettingInfo readerSettings[readerSettingsCount] = {
-    SettingInfo::Enum(StrId::FONT_FAMILY, &CrossPointSettings::fontFamily, {StrId::BOOKERLY, StrId::NOTO_SANS, StrId::OPEN_DYSLEXIC}),
-    SettingInfo::Enum(StrId::FONT_SIZE, &CrossPointSettings::fontSize, {StrId::SMALL, StrId::MEDIUM, StrId::LARGE, StrId::X_LARGE}),
-    SettingInfo::Enum(StrId::LINE_SPACING, &CrossPointSettings::lineSpacing, {StrId::TIGHT, StrId::NORMAL, StrId::WIDE}),
+    SettingInfo::Enum(StrId::FONT_FAMILY, &CrossPointSettings::fontFamily,
+                      {StrId::BOOKERLY, StrId::NOTO_SANS, StrId::OPEN_DYSLEXIC}),
+    SettingInfo::Enum(StrId::FONT_SIZE, &CrossPointSettings::fontSize,
+                      {StrId::SMALL, StrId::MEDIUM, StrId::LARGE, StrId::X_LARGE}),
+    SettingInfo::Enum(StrId::LINE_SPACING, &CrossPointSettings::lineSpacing,
+                      {StrId::TIGHT, StrId::NORMAL, StrId::WIDE}),
     SettingInfo::Value(StrId::SCREEN_MARGIN, &CrossPointSettings::screenMargin, {5, 40, 5}),
     SettingInfo::Enum(StrId::PARA_ALIGNMENT, &CrossPointSettings::paragraphAlignment,
                       {StrId::JUSTIFY, StrId::ALIGN_LEFT, StrId::CENTER, StrId::ALIGN_RIGHT, StrId::BOOK_S_STYLE}),
-                      SettingInfo::Toggle(StrId::EMBEDDED_STYLE, &CrossPointSettings::embeddedStyle), 
+    SettingInfo::Toggle(StrId::EMBEDDED_STYLE, &CrossPointSettings::embeddedStyle),
     SettingInfo::Toggle(StrId::HYPHENATION, &CrossPointSettings::hyphenationEnabled),
     SettingInfo::Enum(StrId::ORIENTATION, &CrossPointSettings::orientation,
                       {StrId::PORTRAIT, StrId::LANDSCAPE_CW, StrId::INVERTED, StrId::LANDSCAPE_CCW}),
@@ -59,14 +63,17 @@ const SettingInfo controlsSettings[controlsSettingsCount] = {
     SettingInfo::Enum(StrId::SIDE_BTN_LAYOUT, &CrossPointSettings::sideButtonLayout,
                       {StrId::PREV_NEXT, StrId::NEXT_PREV}),
     SettingInfo::Toggle(StrId::LONG_PRESS_SKIP, &CrossPointSettings::longPressChapterSkip),
-    SettingInfo::Enum(StrId::SHORT_PWR_BTN, &CrossPointSettings::shortPwrBtn, {StrId::IGNORE, StrId::SLEEP, StrId::PAGE_TURN})};
+    SettingInfo::Enum(StrId::SHORT_PWR_BTN, &CrossPointSettings::shortPwrBtn,
+                      {StrId::IGNORE, StrId::SLEEP, StrId::PAGE_TURN})};
 
 constexpr int systemSettingsCount = 6;
 const SettingInfo systemSettings[systemSettingsCount] = {
     SettingInfo::Enum(StrId::TIME_TO_SLEEP, &CrossPointSettings::sleepTimeout,
                       {StrId::MIN_1, StrId::MIN_5, StrId::MIN_10, StrId::MIN_15, StrId::MIN_30}),
     SettingInfo::Action(StrId::LANGUAGE),
-    SettingInfo::Action(StrId::KOREADER_SYNC), SettingInfo::Action(StrId::OPDS_BROWSER), SettingInfo::Action(StrId::CLEAR_READING_CACHE),
+    SettingInfo::Action(StrId::KOREADER_SYNC),
+    SettingInfo::Action(StrId::OPDS_BROWSER),
+    SettingInfo::Action(StrId::CLEAR_READING_CACHE),
     SettingInfo::Action(StrId::CHECK_UPDATES)};
 }  // namespace
 
@@ -299,8 +306,8 @@ void SettingsActivity::render() const {
       Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing, pageWidth,
            pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.buttonHintsHeight +
                          metrics.verticalSpacing * 2)},
-      settingsCount, selectedSettingIndex - 1, [this](int index) { return std::string(I18N.get(settingsList[index].nameId)); },
-      nullptr, nullptr,
+      settingsCount, selectedSettingIndex - 1,
+      [this](int index) { return std::string(I18N.get(settingsList[index].nameId)); }, nullptr, nullptr,
       [this](int i) {
         const auto& setting = settingsList[i];
         std::string valueText = "";
