@@ -4,10 +4,6 @@
 #include <SDCardManager.h>
 #include <Serialization.h>
 
-#include <algorithm>
-#include <set>
-#include <string>
-
 #include "I18nStrings.h"
 
 using namespace i18n_strings;
@@ -27,19 +23,9 @@ const char* I18n::get(StrId id) const {
     return "???";
   }
 
-  switch (_language) {
-    case Language::SPANISH:
-      return i18n_strings::STRINGS_ES[index];
-    case Language::ITALIAN:
-      return i18n_strings::STRINGS_IT[index];
-    case Language::SWEDISH:
-      return i18n_strings::STRINGS_SV[index];
-    case Language::FRENCH:
-      return i18n_strings::STRINGS_FR[index];
-    case Language::ENGLISH:
-    default:
-      return i18n_strings::STRINGS_EN[index];
-  }
+  // Use generated helper function - no hardcoded switch needed!
+  const char* const* strings = getStringArray(_language);
+  return strings[index];
 }
 
 void I18n::setLanguage(Language lang) {
@@ -51,11 +37,11 @@ void I18n::setLanguage(Language lang) {
 }
 
 const char* I18n::getLanguageName(Language lang) const {
-    const auto index = static_cast<size_t>(lang);
-    if (index >= static_cast<size_t>(Language::_COUNT)) {
-        return "???";
-    }
-    return LANGUAGE_NAMES[index];
+  const auto index = static_cast<size_t>(lang);
+  if (index >= static_cast<size_t>(Language::_COUNT)) {
+    return "???";
+  }
+  return LANGUAGE_NAMES[index];
 }
 
 void I18n::saveSettings() {
@@ -91,7 +77,7 @@ void I18n::loadSettings() {
 
   uint8_t lang;
   serialization::readPod(file, lang);
-  if (lang < static_cast<uint8_t>(Language::_COUNT)) {
+  if (lang < static_cast<size_t>(Language::_COUNT)) {
     _language = static_cast<Language>(lang);
     Serial.printf("[I18N] Loaded language: %d\n", static_cast<int>(_language));
   }
@@ -101,103 +87,10 @@ void I18n::loadSettings() {
 
 // Generate character set for a specific language
 const char* I18n::getCharacterSet(Language lang) {
-  static std::string charsetEN;
-  static std::string charsetES;
-  static std::string charsetIT;
-  static std::string charsetSV;
-  static std::string charsetFR;
-
-  const char* const* strings;
-  std::string* charset;
-
-  switch (lang) {
-    case Language::SPANISH:
-      strings = i18n_strings::STRINGS_ES;
-      charset = &charsetES;
-      break;
-    case Language::ITALIAN:
-      strings = i18n_strings::STRINGS_IT;
-      charset = &charsetIT;
-      break;
-    case Language::SWEDISH:
-      strings = i18n_strings::STRINGS_SV;
-      charset = &charsetSV;
-      break;
-    case Language::FRENCH:
-      strings = i18n_strings::STRINGS_FR;
-      charset = &charsetFR;
-      break;
-    case Language::ENGLISH:
-    default:
-      strings = i18n_strings::STRINGS_EN;
-      charset = &charsetEN;
-      break;
+  const auto langIndex = static_cast<size_t>(lang);
+  if (langIndex >= static_cast<size_t>(Language::_COUNT)) {
+    lang = Language::ENGLISH;  // Fallback to first language
   }
 
-  // Only generate once
-  if (!charset->empty()) {
-    return charset->c_str();
-  }
-
-  std::set<uint32_t> uniqueChars;
-
-  // Iterate through all strings
-  for (size_t i = 0; i < static_cast<size_t>(StrId::_COUNT); i++) {
-    const char* str = strings[i];
-    while (*str) {
-      // Decode UTF-8
-      uint32_t cp = 0;
-      uint8_t b = static_cast<uint8_t>(*str);
-
-      if ((b & 0x80) == 0) {
-        // ASCII
-        cp = b;
-        str++;
-      } else if ((b & 0xE0) == 0xC0) {
-        // 2-byte UTF-8
-        cp = (b & 0x1F) << 6;
-        cp |= (static_cast<uint8_t>(str[1]) & 0x3F);
-        str += 2;
-      } else if ((b & 0xF0) == 0xE0) {
-        // 3-byte UTF-8
-        cp = (b & 0x0F) << 12;
-        cp |= (static_cast<uint8_t>(str[1]) & 0x3F) << 6;
-        cp |= (static_cast<uint8_t>(str[2]) & 0x3F);
-        str += 3;
-      } else if ((b & 0xF8) == 0xF0) {
-        // 4-byte UTF-8
-        cp = (b & 0x07) << 18;
-        cp |= (static_cast<uint8_t>(str[1]) & 0x3F) << 12;
-        cp |= (static_cast<uint8_t>(str[2]) & 0x3F) << 6;
-        cp |= (static_cast<uint8_t>(str[3]) & 0x3F);
-        str += 4;
-      } else {
-        str++;  // Invalid byte, skip
-        continue;
-      }
-
-      uniqueChars.insert(cp);
-    }
-  }
-
-  // Convert to sorted UTF-8 string
-  for (uint32_t cp : uniqueChars) {
-    if (cp < 0x80) {
-      *charset += static_cast<char>(cp);
-    } else if (cp < 0x800) {
-      *charset += static_cast<char>(0xC0 | (cp >> 6));
-      *charset += static_cast<char>(0x80 | (cp & 0x3F));
-    } else if (cp < 0x10000) {
-      *charset += static_cast<char>(0xE0 | (cp >> 12));
-      *charset += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-      *charset += static_cast<char>(0x80 | (cp & 0x3F));
-    } else {
-      *charset += static_cast<char>(0xF0 | (cp >> 18));
-      *charset += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
-      *charset += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-      *charset += static_cast<char>(0x80 | (cp & 0x3F));
-    }
-  }
-
-  return charset->c_str();
+  return CHARACTER_SETS[static_cast<size_t>(lang)];
 }

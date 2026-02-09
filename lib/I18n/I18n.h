@@ -24,7 +24,6 @@ class I18n {
   void setLanguage(Language lang);
   const char* getLanguageName(Language lang) const;
 
-
   void saveSettings();
   void loadSettings();
 

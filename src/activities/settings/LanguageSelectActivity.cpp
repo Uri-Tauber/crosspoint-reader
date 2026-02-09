@@ -14,7 +14,7 @@ void LanguageSelectActivity::taskTrampoline(void* param) {
 void LanguageSelectActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
-  totalItems = getLanguageCount(); 
+  totalItems = getLanguageCount();
   renderingMutex = xSemaphoreCreateMutex();
 
   // Set current selection based on current language

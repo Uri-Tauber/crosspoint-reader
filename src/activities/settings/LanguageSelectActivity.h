@@ -31,7 +31,7 @@ class LanguageSelectActivity final : public ActivityWithSubactivity {
 
   std::function<void()> onBack;
   int selectedIndex = 0;
-  int totalItems;
+  int totalItems = 0;
 
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
