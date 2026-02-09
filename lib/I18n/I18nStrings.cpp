@@ -282,12 +282,6 @@ const char* const STRINGS_EN[] = {
     "caps",
     "OK",
 
-    // Languages
-    "English",
-    "Espa\xC3\xB1ol",
-    "Italiano",
-    "Svenska",
-    "Fran\xC3\xA7\x61is",
 
     // Marker
     "[ON]",
@@ -641,12 +635,6 @@ const char* const STRINGS_ES[] = {
     "caps",
     "OK",
 
-    // Languages
-    "English",
-    "Espa\xC3\xB1ol",
-    "Italiano",
-    "Svenska",
-    "Fran\xC3\xA7\x61is",
 
     // Marker
     "[ON]",
@@ -1000,12 +988,6 @@ const char* const STRINGS_IT[] = {
     "CAPS",
     "OK",
 
-    // LANGUAGES
-    "English",
-    "Espa\xC3\xB1ol",
-    "Italiano",
-    "Svenska",
-    "Fran\xC3\xA7\x61is",
 
     // MARKER
     "[ON]",
@@ -1359,12 +1341,6 @@ const char* const STRINGS_SV[] = {
     "caps",
     "OK",
 
-    // Languages
-    "English",
-    "Espa\xC3\xB1ol",
-    "Italiano",
-    "Svenska",
-    "Fran\xC3\xA7\x61is",
 
     // Marker
     "[ON]",
@@ -1718,12 +1694,6 @@ const char* const STRINGS_FR[] = {
     "caps",
     "OK",
 
-    // Languages
-    "English",
-    "Espa\xC3\xB1ol",
-    "Italiano",
-    "Svenska",
-    "Fran\xC3\xA7\x61is",
 
     // Marker
     "[ON]",

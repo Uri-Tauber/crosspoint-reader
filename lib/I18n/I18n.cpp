@@ -50,6 +50,14 @@ void I18n::setLanguage(Language lang) {
   saveSettings();
 }
 
+const char* I18n::getLanguageName(Language lang) const {
+    const auto index = static_cast<size_t>(lang);
+    if (index >= static_cast<size_t>(Language::_COUNT)) {
+        return "???";
+    }
+    return LANGUAGE_NAMES[index];
+}
+
 void I18n::saveSettings() {
   SdMan.mkdir("/.crosspoint");
 

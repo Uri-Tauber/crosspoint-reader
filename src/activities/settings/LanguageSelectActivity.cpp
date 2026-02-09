@@ -14,6 +14,7 @@ void LanguageSelectActivity::taskTrampoline(void* param) {
 void LanguageSelectActivity::onEnter() {
   ActivityWithSubactivity::onEnter();
 
+  totalItems = getLanguageCount(); 
   renderingMutex = xSemaphoreCreateMutex();
 
   // Set current selection based on current language
@@ -104,9 +105,6 @@ void LanguageSelectActivity::render() {
   // Current language marker
   const int currentLang = static_cast<int>(I18N.getLanguage());
 
-  // Language IDs
-  static constexpr StrId langIds[] = {StrId::ENGLISH, StrId::SPANISH, StrId::ITALIAN, StrId::SWEDISH, StrId::FRENCH};
-
   // Draw options
   for (int i = 0; i < totalItems; i++) {
     const int itemY = 60 + i * rowHeight;
@@ -118,8 +116,9 @@ void LanguageSelectActivity::render() {
       renderer.fillRect(0, itemY - 2, pageWidth - 1, rowHeight);
     }
 
-    // Draw language name
-    renderer.drawText(UI_10_FONT_ID, 20, itemY, I18N.get(langIds[i]), !isSelected);
+    // Draw language name - get it from i18n system
+    const char* langName = I18N.getLanguageName(static_cast<Language>(i));
+    renderer.drawText(UI_10_FONT_ID, 20, itemY, langName, !isSelected);
 
     // Draw current selection marker
     if (isCurrent) {

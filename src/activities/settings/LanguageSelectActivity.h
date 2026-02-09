@@ -31,7 +31,7 @@ class LanguageSelectActivity final : public ActivityWithSubactivity {
 
   std::function<void()> onBack;
   int selectedIndex = 0;
-  static constexpr int totalItems = 5;  // English, Spanish, Italian, Swedish, French
+  int totalItems;
 
   TaskHandle_t displayTaskHandle = nullptr;
   SemaphoreHandle_t renderingMutex = nullptr;
