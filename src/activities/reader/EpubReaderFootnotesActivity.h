@@ -5,6 +5,7 @@
 
 #include "../../lib/Epub/Epub/FootnoteEntry.h"
 #include "../Activity.h"
+#include "util/ButtonNavigator.h"
 
 class FootnotesData {
  private:
@@ -52,6 +53,7 @@ class EpubReaderFootnotesActivity final : public Activity {
   const std::function<void()> onGoBack;
   const std::function<void(const char*)> onSelectFootnote;
   int selectedIndex;
+  ButtonNavigator buttonNavigator;
 
  public:
   EpubReaderFootnotesActivity(GfxRenderer& renderer, MappedInputManager& mappedInput, const FootnotesData& footnotes,

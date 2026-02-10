@@ -4,6 +4,7 @@
 #include <GfxRenderer.h>
 
 #include "MappedInputManager.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 void EpubReaderFootnotesActivity::onEnter() {
@@ -30,62 +31,70 @@ void EpubReaderFootnotesActivity::loop() {
     return;
   }
 
-  bool needsRedraw = false;
-
-  if (mappedInput.wasPressed(MappedInputManager::Button::Up)) {
-    if (selectedIndex > 0) {
-      selectedIndex--;
-      needsRedraw = true;
-    }
-  }
-
-  if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
+  buttonNavigator.onNext([this] {
     if (selectedIndex < footnotes.getCount() - 1) {
       selectedIndex++;
-      needsRedraw = true;
+      render();
     }
-  }
+  });
 
-  if (needsRedraw) {
-    render();
-  }
+  buttonNavigator.onPrevious([this] {
+    if (selectedIndex > 0) {
+      selectedIndex--;
+      render();
+    }
+  });
 }
 
 void EpubReaderFootnotesActivity::render() {
   renderer.clearScreen();
 
-  constexpr int startY = 50;
-  constexpr int lineHeight = 40;
-  constexpr int marginLeft = 20;
+  const auto pageWidth = renderer.getScreenWidth();
+  const auto orientation = renderer.getOrientation();
 
-  // Title
-  renderer.drawText(UI_12_FONT_ID, marginLeft, 20, "Footnotes", EpdFontFamily::BOLD);
+  const bool isLandscapeCw = orientation == GfxRenderer::Orientation::LandscapeClockwise;
+  const bool isLandscapeCcw = orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+  const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
+
+  const int hintGutterWidth = (isLandscapeCw || isLandscapeCcw) ? 30 : 0;
+  const int hintGutterHeight = isPortraitInverted ? 50 : 0;
+
+  const int contentX = isLandscapeCw ? hintGutterWidth : 0;
+  const int contentWidth = pageWidth - hintGutterWidth;
+  const int contentY = hintGutterHeight;
+
+  const int marginLeft = contentX + 20;
+  const int startY = contentY + 50;
+  constexpr int lineHeight = 40;
+
+  renderer.drawText(UI_12_FONT_ID, marginLeft, contentY + 20, "Footnotes", EpdFontFamily::BOLD);
 
   if (footnotes.getCount() == 0) {
-    renderer.drawText(SMALL_FONT_ID, marginLeft, startY + 20, "No footnotes on this page");
+    renderer.drawCenteredText(SMALL_FONT_ID, startY + 20, "No footnotes on this page");
+    const auto labels = mappedInput.mapLabels("« Back", "", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
     renderer.displayBuffer();
     return;
   }
 
-  // Display footnotes
   for (int i = 0; i < footnotes.getCount(); i++) {
     const FootnoteEntry* entry = footnotes.getEntry(i);
     if (!entry) continue;
 
     const int y = startY + i * lineHeight;
+    const bool isSelected = (i == selectedIndex);
 
-    // Draw selection indicator (arrow)
-    if (i == selectedIndex) {
-      renderer.drawText(UI_12_FONT_ID, marginLeft - 10, y, ">", EpdFontFamily::BOLD);
-      renderer.drawText(UI_12_FONT_ID, marginLeft + 10, y, entry->number, EpdFontFamily::BOLD);
-    } else {
-      renderer.drawText(UI_12_FONT_ID, marginLeft + 10, y, entry->number);
+    if (isSelected) {
+      renderer.fillRect(contentX, y, contentWidth, lineHeight, true);
     }
+    const std::string text = entry->number;
+
+    renderer.drawText(UI_12_FONT_ID, marginLeft + 10, y, text.c_str(), !isSelected);
   }
 
-  // Instructions at bottom
-  renderer.drawText(SMALL_FONT_ID, marginLeft, renderer.getScreenHeight() - 40,
-                    "UP/DOWN: Select  CONFIRM: Go to footnote  BACK: Return");
+  // 4. Footer / Hints
+  const auto labels = mappedInput.mapLabels("« Back", "Select", "Up", "Down");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
 }
