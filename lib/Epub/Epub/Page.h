@@ -1,4 +1,5 @@
-#include <SdFat.h>
+#pragma once
+#include <HalStorage.h>
 
 #include <utility>
 #include <vector>

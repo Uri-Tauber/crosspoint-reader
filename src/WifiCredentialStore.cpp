@@ -1,7 +1,7 @@
 #include "WifiCredentialStore.h"
 
+#include <HalStorage.h>
 #include <HardwareSerial.h>
-#include <SDCardManager.h>
 #include <Serialization.h>
 
 // Initialize the static instance
@@ -9,7 +9,7 @@ WifiCredentialStore WifiCredentialStore::instance;
 
 namespace {
 // File format version
-constexpr uint8_t WIFI_FILE_VERSION = 1;
+constexpr uint8_t WIFI_FILE_VERSION = 2;  // Increased version
 
 // WiFi credentials file path
 constexpr char WIFI_FILE[] = "/.crosspoint/wifi.bin";
@@ -29,15 +29,16 @@ void WifiCredentialStore::obfuscate(std::string& data) const {
 
 bool WifiCredentialStore::saveToFile() const {
   // Make sure the directory exists
-  SdMan.mkdir("/.crosspoint");
+  Storage.mkdir("/.crosspoint");
 
   FsFile file;
-  if (!SdMan.openFileForWrite("WCS", WIFI_FILE, file)) {
+  if (!Storage.openFileForWrite("WCS", WIFI_FILE, file)) {
     return false;
   }
 
   // Write header
   serialization::writePod(file, WIFI_FILE_VERSION);
+  serialization::writeString(file, lastConnectedSsid);  // Save last connected SSID
   serialization::writePod(file, static_cast<uint8_t>(credentials.size()));
 
   // Write each credential
@@ -60,17 +61,23 @@ bool WifiCredentialStore::saveToFile() const {
 
 bool WifiCredentialStore::loadFromFile() {
   FsFile file;
-  if (!SdMan.openFileForRead("WCS", WIFI_FILE, file)) {
+  if (!Storage.openFileForRead("WCS", WIFI_FILE, file)) {
     return false;
   }
 
   // Read and verify version
   uint8_t version;
   serialization::readPod(file, version);
-  if (version != WIFI_FILE_VERSION) {
+  if (version > WIFI_FILE_VERSION) {
     Serial.printf("[%lu] [WCS] Unknown file version: %u\n", millis(), version);
     file.close();
     return false;
+  }
+
+  if (version >= 2) {
+    serialization::readString(file, lastConnectedSsid);
+  } else {
+    lastConnectedSsid.clear();
   }
 
   // Read credential count
@@ -128,6 +135,9 @@ bool WifiCredentialStore::removeCredential(const std::string& ssid) {
   if (cred != credentials.end()) {
     credentials.erase(cred);
     Serial.printf("[%lu] [WCS] Removed credentials for: %s\n", millis(), ssid.c_str());
+    if (ssid == lastConnectedSsid) {
+      clearLastConnectedSsid();
+    }
     return saveToFile();
   }
   return false;  // Not found
@@ -146,8 +156,25 @@ const WifiCredential* WifiCredentialStore::findCredential(const std::string& ssi
 
 bool WifiCredentialStore::hasSavedCredential(const std::string& ssid) const { return findCredential(ssid) != nullptr; }
 
+void WifiCredentialStore::setLastConnectedSsid(const std::string& ssid) {
+  if (lastConnectedSsid != ssid) {
+    lastConnectedSsid = ssid;
+    saveToFile();
+  }
+}
+
+const std::string& WifiCredentialStore::getLastConnectedSsid() const { return lastConnectedSsid; }
+
+void WifiCredentialStore::clearLastConnectedSsid() {
+  if (!lastConnectedSsid.empty()) {
+    lastConnectedSsid.clear();
+    saveToFile();
+  }
+}
+
 void WifiCredentialStore::clearAll() {
   credentials.clear();
+  lastConnectedSsid.clear();
   saveToFile();
   Serial.printf("[%lu] [WCS] Cleared all WiFi credentials\n", millis());
 }

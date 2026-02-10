@@ -1,6 +1,6 @@
 #include "Section.h"
 
-#include <SDCardManager.h>
+#include <HalStorage.h>
 #include <Serialization.h>
 
 #include <fstream>
@@ -50,7 +50,7 @@ static bool writeEscapedXml(FsFile& file, const char* text) {
         memcpy(&buffer[bufferPos], "&quot;", 6);
         bufferPos += 6;
       }
-    } else if (c == '\'') {
+    } else if (c == '\''') {
       if (bufferPos + 6 < sizeof(buffer)) {
         memcpy(&buffer[bufferPos], "&apos;", 6);
         bufferPos += 6;
@@ -118,7 +118,7 @@ void Section::writeSectionFileHeader(const int fontId, const float lineCompressi
 bool Section::loadSectionFile(const int fontId, const float lineCompression, const bool extraParagraphSpacing,
                               const uint8_t paragraphAlignment, const uint16_t viewportWidth,
                               const uint16_t viewportHeight, const bool hyphenationEnabled, const bool embeddedStyle) {
-  if (!SdMan.openFileForRead("SCT", filePath, file)) {
+  if (!Storage.openFileForRead("SCT", filePath, file)) {
     return false;
   }
 
@@ -168,12 +168,12 @@ bool Section::loadSectionFile(const int fontId, const float lineCompression, con
 
 // Your updated class method (assuming you are using the 'SD' object, which is a wrapper for a specific filesystem)
 bool Section::clearCache() const {
-  if (!SdMan.exists(filePath.c_str())) {
+  if (!Storage.exists(filePath.c_str())) {
     Serial.printf("[%lu] [SCT] Cache does not exist, no action needed\n", millis());
     return true;
   }
 
-  if (!SdMan.remove(filePath.c_str())) {
+  if (!Storage.remove(filePath.c_str())) {
     Serial.printf("[%lu] [SCT] Failed to clear cache\n", millis());
     return false;
   }
@@ -192,7 +192,7 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
   // Create cache directory if it doesn't exist
   {
     const auto sectionsDir = epub->getCachePath() + "/sections";
-    SdMan.mkdir(sectionsDir.c_str());
+    Storage.mkdir(sectionsDir.c_str());
   }
 
   bool isVirtual = epub->isVirtualSpineItem(spineIndex);
@@ -213,20 +213,27 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
     // Normal file - stream from zip
     for (int attempt = 0; attempt < 3 && !success; attempt++) {
       if (attempt > 0) {
-        Serial.printf("[%lu] [SCT] Retrying stream (attempt %d)...\n", millis(), attempt + 1);
+        Serial.printf("[%lu] [SCT] Retrying stream (attempt %d)...
+", millis(), attempt + 1);
         delay(50);  // Brief delay before retry
       }
 
-      if (SdMan.exists(tmpHtmlPath.c_str())) SdMan.remove(tmpHtmlPath.c_str());
+      // Remove any incomplete file from previous attempt before retrying
+      if (Storage.exists(tmpHtmlPath.c_str())) {
+        Storage.remove(tmpHtmlPath.c_str());
+      }
 
       FsFile tmpHtml;
-      if (!SdMan.openFileForWrite("SCT", tmpHtmlPath, tmpHtml)) continue;
+      if (!Storage.openFileForWrite("SCT", tmpHtmlPath, tmpHtml)) {
+        continue;
+      }
       success = epub->readItemContentsToStream(localPath, tmpHtml, 1024);
       fileSize = tmpHtml.size();
       tmpHtml.close();
 
-      if (!success && SdMan.exists(tmpHtmlPath.c_str())) {
-        SdMan.remove(tmpHtmlPath.c_str());
+      // If streaming failed, remove the incomplete file immediately
+      if (!success && Storage.exists(tmpHtmlPath.c_str())) {
+        Storage.remove(tmpHtmlPath.c_str());
         Serial.printf("[%lu] [SCT] Removed incomplete temp file after failed attempt\n", millis());
       }
     }
@@ -239,7 +246,7 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
     Serial.printf("[%lu] [SCT] Streamed temp HTML to %s (%d bytes)\n", millis(), tmpHtmlPath.c_str(), fileSize);
   }
 
-  if (!SdMan.openFileForWrite("SCT", filePath, file)) {
+  if (!Storage.openFileForWrite("SCT", filePath, file)) {
     return false;
   }
   writeSectionFileHeader(fontId, lineCompression, extraParagraphSpacing, paragraphAlignment, viewportWidth,
@@ -280,14 +287,12 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
 
   success = visitor->parseAndBuildPages();
 
-  if (!isVirtual) {
-    SdMan.remove(tmpHtmlPath.c_str());
-  }
+  Storage.remove(tmpHtmlPath.c_str());
 
   if (!success) {
     Serial.printf("[%lu] [SCT] Failed to parse XML and build pages\n", millis());
     file.close();
-    SdMan.remove(filePath.c_str());
+    Storage.remove(filePath.c_str());
     return false;
   }
 
@@ -306,11 +311,11 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
     std::string fullPath = epub->getCachePath() + "/" + std::string(inlineFilename);
 
     FsFile file;
-    if (SdMan.openFileForWrite("SCT", fullPath, file)) {
+    if (Storage.openFileForWrite("SCT", fullPath, file)) {
       file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
       file.println("<!DOCTYPE html>");
       file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
-      file.println("<head><meta charset=\"UTF-8\"/><title>Footnote</title></head>");
+      file.println("<head><meta charset=\"UTF-8"/><title>Footnote</title></head>");
       file.println("<body>");
       file.print("<p id=\"");
       file.print(inlineId);
@@ -339,11 +344,11 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
     std::string fullPath = epub->getCachePath() + "/" + std::string(pnoteFilename);
 
     FsFile file;
-    if (SdMan.openFileForWrite("SCT", fullPath, file)) {
+    if (Storage.openFileForWrite("SCT", fullPath, file)) {
       file.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
       file.println("<!DOCTYPE html>");
       file.println("<html xmlns=\"http://www.w3.org/1999/xhtml\">");
-      file.println("<head><meta charset=\"UTF-8\"/><title>Note</title></head>");
+      file.println("<head><meta charset=\"UTF-8"/><title>Note</title></head>");
       file.println("<body>");
       file.print("<p id=\"");
       file.print(pnoteId);
@@ -373,7 +378,7 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
   if (hasFailedLutRecords) {
     Serial.printf("[%lu] [SCT] Failed to write LUT due to invalid page positions\n", millis());
     file.close();
-    SdMan.remove(filePath.c_str());
+    Storage.remove(filePath.c_str());
     return false;
   }
 
@@ -386,7 +391,7 @@ bool Section::createSectionFile(const int fontId, const float lineCompression, c
 }
 
 std::unique_ptr<Page> Section::loadPageFromSectionFile() {
-  if (!SdMan.openFileForRead("SCT", filePath, file)) {
+  if (!Storage.openFileForRead("SCT", filePath, file)) {
     return nullptr;
   }
 
