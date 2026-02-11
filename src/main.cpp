@@ -300,7 +300,7 @@ void setup() {
     setupDisplayAndFonts();
     exitActivity();
     enterNewActivity(
-        new FullScreenMessageActivity(renderer, mappedInputManager, i18n(SD_CARD_ERROR), EpdFontFamily::BOLD));
+        new FullScreenMessageActivity(renderer, mappedInputManager, tr(STR_SD_CARD_ERROR), EpdFontFamily::BOLD));
     return;
   }
 

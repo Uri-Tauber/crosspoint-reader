@@ -15,8 +15,8 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 
-const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::CAT_DISPLAY, StrId::CAT_READER,
-                                                              StrId::CAT_CONTROLS, StrId::CAT_SYSTEM};
+const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
+                                                              StrId::STR_CAT_CONTROLS, StrId::STR_CAT_SYSTEM};
 
 void SettingsActivity::taskTrampoline(void* param) {
   auto* self = static_cast<SettingsActivity*>(param);
@@ -34,26 +34,26 @@ void SettingsActivity::onEnter() {
   systemSettings.clear();
 
   for (auto& setting : getSettingsList()) {
-    if (setting.category == StrId::NONE_OPT) continue;
-    if (setting.category == StrId::CAT_DISPLAY) {
+    if (setting.category == StrId::STR_NONE_OPT) continue;
+    if (setting.category == StrId::STR_CAT_DISPLAY) {
       displaySettings.push_back(std::move(setting));
-    } else if (setting.category == StrId::CAT_READER) {
+    } else if (setting.category == StrId::STR_CAT_READER) {
       readerSettings.push_back(std::move(setting));
-    } else if (setting.category == StrId::CAT_CONTROLS) {
+    } else if (setting.category == StrId::STR_CAT_CONTROLS) {
       controlsSettings.push_back(std::move(setting));
-    } else if (setting.category == StrId::CAT_SYSTEM) {
+    } else if (setting.category == StrId::STR_CAT_SYSTEM) {
       systemSettings.push_back(std::move(setting));
     }
     // Web-only categories (KOReader Sync, OPDS Browser) are skipped for device UI
   }
 
   // Append device-only ACTION items
-  controlsSettings.insert(controlsSettings.begin(), SettingInfo::Action(StrId::REMAP_FRONT_BUTTONS));
-  systemSettings.push_back(SettingInfo::Action(StrId::LANGUAGE));
-  systemSettings.push_back(SettingInfo::Action(StrId::KOREADER_SYNC));
-  systemSettings.push_back(SettingInfo::Action(StrId::OPDS_BROWSER));
-  systemSettings.push_back(SettingInfo::Action(StrId::CLEAR_READING_CACHE));
-  systemSettings.push_back(SettingInfo::Action(StrId::CHECK_UPDATES));
+  controlsSettings.insert(controlsSettings.begin(), SettingInfo::Action(StrId::STR_REMAP_FRONT_BUTTONS));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES));
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -181,7 +181,7 @@ void SettingsActivity::toggleCurrentSetting() {
       SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
     }
   } else if (setting.type == SettingType::ACTION) {
-    if (setting.nameId == StrId::REMAP_FRONT_BUTTONS) {
+    if (setting.nameId == StrId::STR_REMAP_FRONT_BUTTONS) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new ButtonRemapActivity(renderer, mappedInput, [this] {
@@ -189,7 +189,7 @@ void SettingsActivity::toggleCurrentSetting() {
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::KOREADER_SYNC) {
+    } else if (setting.nameId == StrId::STR_KOREADER_SYNC) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new KOReaderSettingsActivity(renderer, mappedInput, [this] {
@@ -197,7 +197,7 @@ void SettingsActivity::toggleCurrentSetting() {
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::OPDS_BROWSER) {
+    } else if (setting.nameId == StrId::STR_OPDS_BROWSER) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new CalibreSettingsActivity(renderer, mappedInput, [this] {
@@ -205,7 +205,7 @@ void SettingsActivity::toggleCurrentSetting() {
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::CLEAR_READING_CACHE) {
+    } else if (setting.nameId == StrId::STR_CLEAR_READING_CACHE) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new ClearCacheActivity(renderer, mappedInput, [this] {
@@ -213,7 +213,7 @@ void SettingsActivity::toggleCurrentSetting() {
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::CHECK_UPDATES) {
+    } else if (setting.nameId == StrId::STR_CHECK_UPDATES) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new OtaUpdateActivity(renderer, mappedInput, [this] {
@@ -221,7 +221,7 @@ void SettingsActivity::toggleCurrentSetting() {
         updateRequired = true;
       }));
       xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::LANGUAGE) {
+    } else if (setting.nameId == StrId::STR_LANGUAGE) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
       enterNewActivity(new LanguageSelectActivity(renderer, mappedInput, [this] {
@@ -257,7 +257,7 @@ void SettingsActivity::render() const {
 
   auto metrics = UITheme::getInstance().getMetrics();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, i18n(SETTINGS_TITLE));
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE));
 
   std::vector<TabInfo> tabs;
   tabs.reserve(categoryCount);
@@ -280,7 +280,7 @@ void SettingsActivity::render() const {
         std::string valueText = "";
         if (setting.type == SettingType::TOGGLE && setting.valuePtr != nullptr) {
           const bool value = SETTINGS.*(setting.valuePtr);
-          valueText = value ? i18n(STATE_ON) : i18n(STATE_OFF);
+          valueText = value ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
         } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
           const uint8_t value = SETTINGS.*(setting.valuePtr);
           valueText = I18N.get(setting.enumValues[value]);
@@ -296,7 +296,7 @@ void SettingsActivity::render() const {
                     metrics.versionTextY, CROSSPOINT_VERSION);
 
   // Draw help text
-  const auto labels = mappedInput.mapLabels(i18n(BACK), i18n(TOGGLE), i18n(DIR_UP), i18n(DIR_DOWN));
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Always use standard refresh for settings screen

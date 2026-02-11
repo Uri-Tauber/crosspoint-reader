@@ -7,12 +7,13 @@ const char* const LANGUAGE_NAMES[] = {
     "English",
     "Espa\xC3"
     "\xB1"
-    "ol",
-    "Italiano",
-    "Svenska",
+    "ol (placeholder)",
+    "Italiano (placeholder)",
+    "Svenska (placeholder)",
     "Fran\xC3"
     "\xA7"
     "ais",
+    "Deutsch",
 };
 
 // Character sets for each language
@@ -22,16 +23,65 @@ const char* const CHARACTER_SETS[] = {
     "",  // English
     " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]dfsuz|\xC2"
     "\xAB"
-    "",  // Español
+    "",  // Español (placeholder)
     " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXY[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
     "\xAB"
-    "",  // Italiano
+    "",  // Italiano (placeholder)
     " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXY[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
     "\xAB"
-    "",  // Svenska
-    " !\"%'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXY[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
+    "",  // Svenska (placeholder)
+    " !%()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghijklmnopqrstuvwxyz|\xC2"
     "\xAB"
+    "\xC3"
+    "\x89"
+    "\xC3"
+    "\xA0"
+    "\xC3"
+    "\xA7"
+    "\xC3"
+    "\xA8"
+    "\xC3"
+    "\xA9"
+    "\xC3"
+    "\xAA"
+    "\xC3"
+    "\xAE"
+    "\xC3"
+    "\xB4"
+    "\xE2"
+    "\x80"
+    "\x98"
+    "\xE2"
+    "\x80"
+    "\x99"
+    "\xE2"
+    "\x80"
+    "\x9C"
+    "\xE2"
+    "\x80"
+    "\x9D"
+    "\xE2"
+    "\x80"
+    "\xA6"
     "",  // Français
+    " !\"%&'()*+,-./012345:=?ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]abcdefghiklmnoprstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\x96"
+    "\xC3"
+    "\x9C"
+    "\xC3"
+    "\x9F"
+    "\xC3"
+    "\xA4"
+    "\xC3"
+    "\xB6"
+    "\xC3"
+    "\xBC"
+    "\xE2"
+    "\x80"
+    "\xA6"
+    "",  // Deutsch
 };
 
 namespace i18n_strings {
@@ -344,8 +394,8 @@ const char* const STRINGS_EN[] = {
     "Progress found!",
     "Remote:",
     "Local:",
-    "  Page %d, %.2f%% overall",
-    "  Page %d/%d, %.2f%% overall",
+    "Page %d, %.2f%% overall",
+    "Page %d/%d, %.2f%% overall",
     "  From: %s",
     "Apply remote progress",
     "Upload local progress",
@@ -360,7 +410,7 @@ const char* const STRINGS_EN[] = {
     "OPDS Server URL",
 };
 
-const char* const STRINGS_ES[] = {
+const char* const STRINGS_SP[] = {
     "CROSSPOINT",
     "BOOTING",
     "SLEEPING",
@@ -668,8 +718,8 @@ const char* const STRINGS_ES[] = {
     "PROGRESS FOUND!",
     "REMOTE",
     "LOCAL",
-    "  PAGE %d, %.2f%% OVERALL",
-    "  PAGE %d/%d, %.2f%% OVERALL",
+    "PAGE %d, %.2f%% OVERALL",
+    "PAGE %d/%d, %.2f%% OVERALL",
     "  FROM: %s",
     "APPLY REMOTE PROGRESS",
     "UPLOAD LOCAL PROGRESS",
@@ -992,8 +1042,8 @@ const char* const STRINGS_IT[] = {
     "Progress found!",
     "Remote:",
     "Local:",
-    "  Page %d, %.2f%% overall",
-    "  Page %d/%d, %.2f%% overall",
+    "Page %d, %.2f%% overall",
+    "Page %d/%d, %.2f%% overall",
     "  From: %s",
     "Apply remote progress",
     "Upload local progress",
@@ -1008,7 +1058,7 @@ const char* const STRINGS_IT[] = {
     "OPDS Server URL",
 };
 
-const char* const STRINGS_SV[] = {
+const char* const STRINGS_SW[] = {
     "CrossPoint",
     "BOOTING",
     "SLEEPING",
@@ -1316,8 +1366,8 @@ const char* const STRINGS_SV[] = {
     "Progress found!",
     "Remote:",
     "Local:",
-    "  Page %d, %.2f%% overall",
-    "  Page %d/%d, %.2f%% overall",
+    "Page %d, %.2f%% overall",
+    "Page %d/%d, %.2f%% overall",
     "  From: %s",
     "Apply remote progress",
     "Upload local progress",
@@ -1334,186 +1384,480 @@ const char* const STRINGS_SV[] = {
 
 const char* const STRINGS_FR[] = {
     "CrossPoint",
-    "BOOTING",
-    "SLEEPING",
-    "Entering Sleep...",
-    "Browse Files",
-    "File Transfer",
-    "Settings",
-    "Calibre Library",
-    "Continue Reading",
-    "No open book",
-    "Start reading below",
-    "Books",
-    "No books found",
-    "Select Chapter",
-    "No chapters",
-    "End of book",
-    "Empty chapter",
-    "Indexing...",
-    "Memory error",
-    "Page load error",
-    "Empty file",
-    "Out of bounds",
-    "Loading...",
-    "Failed to load XTC",
-    "Failed to load TXT",
-    "Failed to load EPUB",
-    "SD card error",
-    "WiFi Networks",
-    "No networks found",
-    "%zu networks found",
-    "Scanning...",
-    "Connecting...",
-    "Connected!",
-    "Connection Failed",
-    "Connection timeout",
-    "Forget Network?",
-    "Save password for next time?",
-    "Remove saved password?",
-    "Press OK to scan again",
-    "Press any button to continue",
-    "LEFT/RIGHT: Select | OK: Confirm",
-    "How would you like to connect?",
-    "Join a Network",
-    "Create Hotspot",
-    "Connect to an existing WiFi network",
-    "Create a WiFi network others can join",
-    "Starting Hotspot...",
-    "Hotspot Mode",
-    "Connect your device to this WiFi network",
-    "Open this URL in your browser",
-    "or http://",
-    "or scan QR code with your phone:",
-    "Calibre Wireless",
-    "Calibre Web URL",
-    "Connect as Wireless Device",
-    "* = Encrypted | + = Saved",
-    "MAC address:",
-    "Checking WiFi...",
-    "Enter WiFi Password",
-    "Enter Text",
-    "to ",
-    "Discovering Calibre...",
-    "Connecting to ",
-    "Connected to ",
-    "Waiting for commands...",
-    "(Connection failed, retrying)",
-    "Calibre disconnected",
-    "Waiting for transfer...",
-    "If transfer fails, enable\n'Ignore free space' in Calibre's\nSmartDevice plugin settings.",
-    "Receiving: ",
-    "Received: ",
-    "Waiting for more...",
-    "Failed to create file",
-    "Password required",
-    "Transfer interrupted",
-    "1) Install CrossPoint Reader plugin",
-    "2) Be on the same WiFi network",
-    "3) In Calibre: \"Send to device\"",
-    "\"Keep this screen open while sending\"",
-    "Display",
-    "Reader",
-    "Controls",
-    "System",
-    "Sleep Screen",
-    "Sleep Screen Cover Mode",
-    "Status Bar",
-    "Hide Battery %",
-    "Extra Paragraph Spacing",
-    "Text Anti-Aliasing",
-    "Short Power Button Click",
-    "Reading Orientation",
-    "Front Button Layout",
-    "Side Button Layout (reader)",
-    "Long-press Chapter Skip",
-    "Reader Font Family",
-    "External Reader Font",
-    "Reader Font",
-    "UI Font",
-    "UI Font Size",
-    "Reader Line Spacing",
-    "ASCII Letter Spacing",
-    "ASCII Digit Spacing",
-    "CJK Spacing",
-    "Color Mode",
-    "Reader Screen Margin",
-    "Reader Paragraph Alignment",
-    "Hyphenation",
-    "Time to Sleep",
-    "Refresh Frequency",
-    "Calibre Settings",
-    "KOReader Sync",
-    "Check for updates",
-    "Language",
-    "Select Wallpaper",
-    "Clear Reading Cache",
+    "D\xC3"
+    "\x89"
+    "MARRAGE EN COURS",
+    "VEILLE",
+    "Mise en veille\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Fichiers",
+    "Transfert",
+    "R\xC3"
+    "\xA9"
+    "glages",
+    "Biblioth\xC3"
+    "\xA8"
+    "que Calibre",
+    "Continuer la lecture",
+    "Aucun livre ouvert",
+    "Lisez votre premier livre ci-dessous",
+    "Livres",
+    "Dossier vide",
+    "Choix du chapitre",
+    "Aucun chapitre",
+    "Fin du livre",
+    "Chapitre vide",
+    "Indexation en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Erreur de m\xC3"
+    "\xA9"
+    "moire",
+    "Erreur de chargement",
+    "Fichier vide",
+    "D\xC3"
+    "\xA9"
+    "passement de m\xC3"
+    "\xA9"
+    "moire",
+    "Chargement\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Erreur de chargement du fichier XTC",
+    "Erreur de chargement du fichier TXT",
+    "Erreur de chargement du fichier EPUB",
+    "Carte m\xC3"
+    "\xA9"
+    "moire absente",
+    "R\xC3"
+    "\xA9"
+    "seaux WiFi",
+    "Aucun r\xC3"
+    "\xA9"
+    "seau",
+    "%zu r\xC3"
+    "\xA9"
+    "seaux",
+    "Recherche de r\xC3"
+    "\xA9"
+    "seaux en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Connexion en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Connect\xC3"
+    "\xA9"
+    " !",
+    "\xC3"
+    "\x89"
+    "chec de la connexion",
+    "D\xC3"
+    "\xA9"
+    "lai de connexion d\xC3"
+    "\xA9"
+    "pass\xC3"
+    "\xA9"
+    "",
+    "Oublier ce r\xC3"
+    "\xA9"
+    "seau ?",
+    "Enregistrer le mot de passe ?",
+    "Supprimer le mot de passe enregistr\xC3"
+    "\xA9"
+    " ?",
+    "Appuyez sur OK pour d\xC3"
+    "\xA9"
+    "tecter \xC3"
+    "\xA0"
+    " nouveau",
+    "Appuyez sur une touche pour continuer",
+    "GAUCHE/DROITE: S\xC3"
+    "\xA9"
+    "lectionner | OK: Valider",
+    "Comment voulez-vous vous connecter ?",
+    "Connexion \xC3"
+    "\xA0"
+    " un r\xC3"
+    "\xA9"
+    "seau",
+    "Cr\xC3"
+    "\xA9"
+    "er un point d\xE2"
+    "\x80"
+    "\x99"
+    "acc\xC3"
+    "\xA8"
+    "s",
+    "Se connecter \xC3"
+    "\xA0"
+    " un r\xC3"
+    "\xA9"
+    "seau WiFi existant",
+    "Cr\xC3"
+    "\xA9"
+    "er un r\xC3"
+    "\xA9"
+    "seau WiFi accessible depuis d\xE2"
+    "\x80"
+    "\x99"
+    "autres appareils",
+    "Cr\xC3"
+    "\xA9"
+    "ation du point d\xE2"
+    "\x80"
+    "\x99"
+    "acc\xC3"
+    "\xA8"
+    "s en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Mode point d\xE2"
+    "\x80"
+    "\x99"
+    "acc\xC3"
+    "\xA8"
+    "s",
+    "Connectez un appareil \xC3"
+    "\xA0"
+    " ce r\xC3"
+    "\xA9"
+    "seau WiFi",
+    "Ouvrez cette URL dans votre navigateur",
+    "ou http://",
+    "ou scannez le QR code avec votre t\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "phone",
+    "Connexion \xC3"
+    "\xA0"
+    " Calibre sans fil",
+    "URL Web Calibre",
+    "Se connecter comme appareil sans fil",
+    "* = S\xC3"
+    "\xA9"
+    "curis\xC3"
+    "\xA9"
+    " | + = Sauvegard\xC3"
+    "\xA9"
+    "",
+    "Adresse MAC :",
+    "V\xC3"
+    "\xA9"
+    "rification du r\xC3"
+    "\xA9"
+    "seau WiFi...",
+    "Entrez le mot de passe WiFi",
+    "Entrez le texte",
+    "\xC3"
+    "\xA0"
+    " ",
+    "Recherche de Calibre en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Connexion \xC3"
+    "\xA0"
+    " ",
+    "Connect\xC3"
+    "\xA9"
+    " \xC3"
+    "\xA0"
+    "  ",
+    "En attente de commandes\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "(\xC3"
+    "\x89"
+    "chec de la connexion, nouvelle tentative)",
+    "Calibre d\xC3"
+    "\xA9"
+    "connect\xC3"
+    "\xA9"
+    "",
+    "En attente de transfert\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Si le transfert \xC3"
+    "\xA9"
+    "choue, activez\n\xE2"
+    "\x80"
+    "\x99"
+    "Ignorer l\xE2"
+    "\x80"
+    "\x99"
+    "espace libre\xE2"
+    "\x80"
+    "\x99"
+    " dans les\nparam\xC3"
+    "\xA8"
+    "tres du plugin SmartDevice de Calibre.",
+    "R\xC3"
+    "\xA9"
+    "ception : ",
+    "Re\xC3"
+    "\xA7"
+    "us : ",
+    "En attente de donn\xC3"
+    "\xA9"
+    "es suppl\xC3"
+    "\xA9"
+    "mentaires\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "\xC3"
+    "\x89"
+    "chec de la cr\xC3"
+    "\xA9"
+    "ation du fichier",
+    "Mot de passe requis",
+    "Transfert interrompu",
+    "1) Installer le plugin CrossPoint Reader",
+    "2) Se connecter au m\xC3"
+    "\xAA"
+    "me r\xC3"
+    "\xA9"
+    "seau WiFi",
+    "3) Dans Calibre : \xE2"
+    "\x80"
+    "\x98"
+    "Envoyer vers l\xE2"
+    "\x80"
+    "\x99"
+    "appareil\xE2"
+    "\x80"
+    "\x99"
+    "",
+    "\xE2"
+    "\x80"
+    "\x9C"
+    "Gardez cet \xC3"
+    "\xA9"
+    "cran ouvert pendant le transfert\xE2"
+    "\x80"
+    "\x9D"
+    "",
+    "Affichage",
+    "Lecteur",
+    "Commandes",
+    "Syst\xC3"
+    "\xA8"
+    "me",
+    "\xC3"
+    "\x89"
+    "cran de veille",
+    "Mode d\xE2"
+    "\x80"
+    "\x99"
+    "image de l\xE2"
+    "\x80"
+    "\x99"
+    "\xC3"
+    "\xA9"
+    "cran de veille",
+    "Barre d\xE2"
+    "\x80"
+    "\x99"
+    "\xC3"
+    "\xA9"
+    "tat",
+    "Masquer % batterie",
+    "Espacement des paragraphes",
+    "Lissage du texte",
+    "Appui court bout. alim.",
+    "Orientation de lecture",
+    "Disposition des boutons avant",
+    "Disposition des boutons lat\xC3"
+    "\xA9"
+    "raux",
+    "Appui long pour saut de chapitre",
+    "Police de caract\xC3"
+    "\xA8"
+    "res du lecteur",
+    "Police externe",
+    "Police du lecteur",
+    "Police de l\xE2"
+    "\x80"
+    "\x99"
+    "interface",
+    "Taille du texte de l\xE2"
+    "\x80"
+    "\x99"
+    "interface",
+    "Espacement des lignes",
+    "Espacement des lettres ASCII",
+    "Espacement des chiffres ASCII",
+    "Espacement CJK",
+    "Mode couleur",
+    "Marges du lecteur",
+    "Alignement des paragraphes",
+    "C\xC3"
+    "\xA9"
+    "sure",
+    "Mise en veille automatique",
+    "Fr\xC3"
+    "\xA9"
+    "quence de rafra\xC3"
+    "\xAE"
+    "chissement",
+    "R\xC3"
+    "\xA9"
+    "glages Calibre",
+    "Synchronisation KOReader",
+    "Mise \xC3"
+    "\xA0"
+    " jour",
+    "Langue",
+    "Fond d\xE2"
+    "\x80"
+    "\x99"
+    "\xC3"
+    "\xA9"
+    "cran",
+    "Vider le cache de lecture",
     "Calibre",
-    "Username",
-    "Password",
-    "Sync Server URL",
-    "Document Matching",
-    "Authenticate",
-    "KOReader Username",
-    "KOReader Password",
-    "Filename",
-    "Binary",
-    "Set credentials first",
-    "WiFi connection failed",
-    "Authenticating...",
-    "Successfully authenticated!",
-    "KOReader Auth",
-    "KOReader sync is ready to use",
-    "Authentication Failed",
-    "Done",
-    "This will clear all cached book data.",
-    "All reading progress will be lost!",
-    "Books will need to be re-indexed",
-    "when opened again.",
-    "Clearing cache...",
-    "Cache Cleared",
-    "items removed",
-    "failed",
-    "Failed to clear cache",
-    "Check serial output for details",
-    "Dark",
-    "Light",
+    "Nom d\xE2"
+    "\x80"
+    "\x99"
+    "utilisateur",
+    "Mot de passe",
+    "URL du serveur",
+    "Correspondance",
+    "Se connecter",
+    "Nom d\xE2"
+    "\x80"
+    "\x99"
+    "utilisateur",
+    "Mot de passe",
+    "Nom de fichier",
+    "Binaire",
+    "Identifiants manquants",
+    "\xC3"
+    "\x89"
+    "chec de connexion WiFi",
+    "Connexion en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Connexion r\xC3"
+    "\xA9"
+    "ussie !",
+    "Auth KOReader",
+    "Synchronisation KOReader pr\xC3"
+    "\xAA"
+    "te",
+    "\xC3"
+    "\x89"
+    "chec de la connexion",
+    "OK",
+    "Le cache de votre biblioth\xC3"
+    "\xA8"
+    "que sera enti\xC3"
+    "\xA8"
+    "rement vid\xC3"
+    "\xA9"
+    "",
+    "Votre progression de lecture sera perdue !",
+    "Les livres devront \xC3"
+    "\xAA"
+    "tre r\xC3"
+    "\xA9"
+    "index\xC3"
+    "\xA9"
+    "s",
+    "\xC3"
+    "\xA0"
+    " leur prochaine ouverture.",
+    "Suppression du cache\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Cache supprim\xC3"
+    "\xA9"
+    "",
+    "\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "ments supprim\xC3"
+    "\xA9"
+    "s",
+    "ont \xC3"
+    "\xA9"
+    "chou\xC3"
+    "\xA9"
+    "",
+    "\xC3"
+    "\x89"
+    "chec de la suppression du cache",
+    "V\xC3"
+    "\xA9"
+    "rifiez la console s\xC3"
+    "\xA9"
+    "rie pour plus de d\xC3"
+    "\xA9"
+    "tails",
+    "Sombre",
+    "Clair",
     "Custom",
-    "Cover",
-    "None",
-    "Fit",
-    "Crop",
-    "No Progress",
-    "Full",
-    "Never",
-    "In Reader",
-    "Always",
-    "Ignore",
-    "Sleep",
-    "Page Turn",
+    "Couverture",
+    "Aucun",
+    "Ajust\xC3"
+    "\xA9"
+    "",
+    "Rogn\xC3"
+    "\xA9"
+    "",
+    "Sans progression",
+    "Compl\xC3"
+    "\xA8"
+    "te",
+    "Jamais",
+    "Dans le lecteur",
+    "Toujours",
+    "Ignorer",
+    "Mise en veille",
+    "Page suivante",
     "Portrait",
-    "Landscape CW",
-    "Inverted",
-    "Landscape CCW",
-    "Bck, Cnfrm, Lft, Rght",
-    "Lft, Rght, Bck, Cnfrm",
-    "Lft, Bck, Cnfrm, Rght",
-    "Prev/Next",
-    "Next/Prev",
+    "Paysage",
+    "Invers\xC3"
+    "\xA9"
+    "",
+    "Paysage invers\xC3"
+    "\xA9"
+    "",
+    "Ret, OK, Gauche, Droite",
+    "Gauche, Droite, Ret, OK",
+    "Gauche, Ret, OK, Droite",
+    "Prec/Suiv",
+    "Suiv/Prec",
     "Bookerly",
     "Noto Sans",
     "Open Dyslexic",
-    "Small",
-    "Medium",
-    "Large",
-    "X Large",
-    "Tight",
+    "Petite",
+    "Moyenne",
+    "Grande",
+    "T Grande",
+    "Serr\xC3"
+    "\xA9"
+    "",
     "Normal",
-    "Wide",
-    "Justify",
-    "Left",
-    "Center",
-    "Right",
+    "Large",
+    "Justifier",
+    "Gauche",
+    "Centre",
+    "Droite",
     "1 min",
     "5 min",
     "10 min",
@@ -1524,136 +1868,830 @@ const char* const STRINGS_FR[] = {
     "10 pages",
     "15 pages",
     "30 pages",
-    "Update",
-    "Checking for update...",
-    "New update available!",
-    "Current Version: ",
-    "New Version: ",
-    "Updating...",
-    "No update available",
-    "Update failed",
-    "Update complete",
-    "Press and hold power button to turn back on",
-    "External Font",
-    "Built-in (Disabled)",
-    "No entries found",
-    "Downloading...",
-    "Download failed",
-    "Error:",
-    "Unnamed",
-    "No server URL configured",
-    "Failed to fetch feed",
-    "Failed to parse feed",
-    "Network: ",
-    "IP Address: ",
+    "Mise \xC3"
+    "\xA0"
+    " jour",
+    "Recherche de mises \xC3"
+    "\xA0"
+    " jour en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Nouvelle mise \xC3"
+    "\xA0"
+    " jour disponible !",
+    "Version actuelle :",
+    "Nouvelle version : ",
+    "Mise \xC3"
+    "\xA0"
+    " jour en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Aucune mise \xC3"
+    "\xA0"
+    " jour disponible",
+    "\xC3"
+    "\x89"
+    "chec de la mise \xC3"
+    "\xA0"
+    " jour",
+    "Mise \xC3"
+    "\xA0"
+    " jour effectu\xC3"
+    "\xA9"
+    "e",
+    "Maintenir le bouton d\xE2"
+    "\x80"
+    "\x99"
+    "alimentation pour red\xC3"
+    "\xA9"
+    "marrer",
+    "Police externe",
+    "Int\xC3"
+    "\xA9"
+    "gr\xC3"
+    "\xA9"
+    "e (d\xC3"
+    "\xA9"
+    "sactiv\xC3"
+    "\xA9"
+    "e)",
+    "Aucune entr\xC3"
+    "\xA9"
+    "e trouv\xC3"
+    "\xA9"
+    "e",
+    "T\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "chargement en cours\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "\xC3"
+    "\x89"
+    "chec du t\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "chargement",
+    "Erreur : ",
+    "Sans titre",
+    "Aucune URL serveur configur\xC3"
+    "\xA9"
+    "e",
+    "\xC3"
+    "\x89"
+    "chec du t\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "chargement du flux",
+    "\xC3"
+    "\x89"
+    "chec de l\xE2"
+    "\x80"
+    "\x99"
+    "analyse du flux",
+    "R\xC3"
+    "\xA9"
+    "seau : ",
+    "Adresse IP : ",
     "or scan QR code with your phone to connect to Wifi.",
-    "Error: General failure",
-    "Error: Network not found",
-    "Error: Connection timeout",
-    "SD card",
+    "Erreur : \xC3"
+    "\x89"
+    "chec g\xC3"
+    "\xA9"
+    "n\xC3"
+    "\xA9"
+    "ral",
+    "Erreur : R\xC3"
+    "\xA9"
+    "seau introuvable",
+    "Erreur : D\xC3"
+    "\xA9"
+    "lai de connexion d\xC3"
+    "\xA9"
+    "pass\xC3"
+    "\xA9"
+    "",
+    "Carte SD",
     "\xC2"
     "\xAB"
-    " Back",
+    " Retour",
     "\xC2"
     "\xAB"
-    " Exit",
+    " Sortie",
     "\xC2"
     "\xAB"
-    " Home",
+    " Accueil",
     "\xC2"
     "\xAB"
-    " Save",
-    "Select",
-    "Toggle",
-    "Confirm",
-    "Cancel",
-    "Connect",
-    "Open",
-    "Download",
-    "Retry",
-    "Yes",
-    "No",
+    " Sauver",
+    "OK",
+    "Modifier",
+    "Confirmer",
+    "Annuler",
+    "OK",
+    "Ouvrir",
+    "T\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "charger",
+    "R\xC3"
+    "\xA9"
+    "essayer",
+    "Oui",
+    "Non",
     "ON",
     "OFF",
-    "Set",
-    "Not Set",
-    "Left",
-    "Right",
-    "Up",
-    "Down",
-    "CAPS",
-    "caps",
+    "D\xC3"
+    "\xA9"
+    "fini",
+    "Non d\xC3"
+    "\xA9"
+    "fini",
+    "Gauche",
+    "Droite",
+    "Haut",
+    "Bas",
+    "MAJ",
+    "maj",
     "OK",
     "[ON]",
-    "Sleep Screen Cover Filter",
-    "Contrast",
-    "Full w/ Percentage",
-    "Full w/ Book Bar",
-    "Book Bar Only",
-    "Full w/ Chapter Bar",
-    "UI Theme",
-    "Classic",
+    "Filtre affichage veille",
+    "Contraste",
+    "Compl\xC3"
+    "\xA8"
+    "te + %",
+    "Compl\xC3"
+    "\xA8"
+    "te + barre livre",
+    "Barre livre",
+    "Compl\xC3"
+    "\xA8"
+    "te + barre chapitre",
+    "Th\xC3"
+    "\xA8"
+    "me de l\xE2"
+    "\x80"
+    "\x99"
+    "interface",
+    "Classique",
     "Lyra",
-    "Sunlight Fading Fix",
-    "Remap Front Buttons",
-    "OPDS Browser",
-    "Cover + Custom",
-    "Recents",
-    "Recent Books",
-    "No recent books",
-    "Use Calibre wireless device transfers",
-    "Forget network and remove saved password?",
-    "Forget network",
-    "Starting Calibre...",
-    "Setup",
-    "Status",
-    "Clear",
-    "Default",
-    "Press a front button for each role",
-    "Unassigned",
-    "Already assigned",
-    "Side button Up: Reset to default layout",
-    "Side button Down: Cancel remapping",
-    "Back (1st button)",
-    "Confirm (2nd button)",
-    "Left (3rd button)",
-    "Right (4th button)",
-    "Go to %",
-    "Go Home",
-    "Sync Progress",
-    "Delete Book Cache",
-    "Chapter: ",
+    "Am\xC3"
+    "\xA9"
+    "lioration de la lisibilit\xC3"
+    "\xA9"
+    " au soleil",
+    "R\xC3"
+    "\xA9"
+    "assigner les boutons avant",
+    "Navigateur OPDS",
+    "Couverture + Custom",
+    "R\xC3"
+    "\xA9"
+    "cents",
+    "Livres r\xC3"
+    "\xA9"
+    "cents",
+    "Aucun livre r\xC3"
+    "\xA9"
+    "cent",
+    "Utiliser les transferts sans fil Calibre",
+    "Oublier le r\xC3"
+    "\xA9"
+    "seau et supprimer le mot de passe enregistr\xC3"
+    "\xA9"
+    " ?",
+    "Oublier le r\xC3"
+    "\xA9"
+    "seau",
+    "D\xC3"
+    "\xA9"
+    "marrage de Calibre...",
+    "Configuration",
+    "Statut",
+    "Effacer",
+    "D\xC3"
+    "\xA9"
+    "faut",
+    "Appuyez sur un bouton avant pour chaque r\xC3"
+    "\xB4"
+    "le",
+    "Non assign\xC3"
+    "\xA9"
+    "",
+    "D\xC3"
+    "\xA9"
+    "j\xC3"
+    "\xA0"
+    " assign\xC3"
+    "\xA9"
+    "",
+    "Bouton lat\xC3"
+    "\xA9"
+    "ral haut : R\xC3"
+    "\xA9"
+    "initialiser",
+    "Bouton lat\xC3"
+    "\xA9"
+    "ral bas : Annuler le r\xC3"
+    "\xA9"
+    "glage",
+    "Retour (1er bouton)",
+    "OK (2\xC3"
+    "\xA8"
+    "me bouton)",
+    "Gauche (3\xC3"
+    "\xA8"
+    "me bouton)",
+    "Droite (4\xC3"
+    "\xA8"
+    "me bouton)",
+    "Aller \xC3"
+    "\xA0"
+    " %",
+    "Aller \xC3"
+    "\xA0"
+    " l\xE2"
+    "\x80"
+    "\x99"
+    "accueil",
+    "Synchroniser la progression",
+    "Supprimer le cache du livre",
+    "Chapitre : ",
     " pages  |  ",
-    "Book: ",
-    "shift",
-    "SHIFT",
-    "LOCK",
-    "For Calibre, add /opds to your URL",
-    "Left/Right: 1%  Up/Down: 10%",
-    "Syncing time...",
-    "Calculating document hash...",
-    "Failed to calculate document hash",
-    "Fetching remote progress...",
-    "Uploading progress...",
-    "No credentials configured",
-    "Set up KOReader account in Settings",
-    "Progress found!",
-    "Remote:",
-    "Local:",
-    "  Page %d, %.2f%% overall",
-    "  Page %d/%d, %.2f%% overall",
-    "  From: %s",
-    "Apply remote progress",
-    "Upload local progress",
-    "No remote progress found",
-    "Upload current position?",
-    "Progress uploaded!",
-    "Sync failed",
+    "Livre : ",
+    "maj",
+    "MAJ",
+    "VERR MAJ",
+    "Pour Calibre, ajoutez /opds \xC3"
+    "\xA0"
+    " l\xE2"
+    "\x80"
+    "\x99"
+    "URL",
+    "Gauche/Droite : 1%  Haut/Bas : 10%",
+    "Synchronisation de l\xE2"
+    "\x80"
+    "\x99"
+    "heure\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Calcul du hash du document\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "\xC3"
+    "\x89"
+    "chec du calcul du hash du document",
+    "T\xC3"
+    "\xA9"
+    "l\xC3"
+    "\xA9"
+    "chargement de la progression\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Envoi de la progression\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Aucun identifiant configur\xC3"
+    "\xA9"
+    "",
+    "Configurez le compte KOReader dans les r\xC3"
+    "\xA9"
+    "glages",
+    "Progression trouv\xC3"
+    "\xA9"
+    "e !",
+    "En ligne :",
+    "Locale :",
+    "Page %d, %.2f%% au total",
+    "Page %d/%d, %.2f%% au total",
+    "  De : %s",
+    "Appliquer la progression en ligne",
+    "Envoyer la progression locale",
+    "Aucune progression en ligne trouv\xC3"
+    "\xA9"
+    "e",
+    "Envoyer la position actuelle ?",
+    "Progression envoy\xC3"
+    "\xA9"
+    "e !",
+    "\xC3"
+    "\x89"
+    "chec de la synchronisation",
     "Section ",
-    "Upload",
-    "Book's Style",
-    "Embedded Style",
-    "OPDS Server URL",
+    "Envoi",
+    "Style du livre",
+    "Style int\xC3"
+    "\xA9"
+    "gr\xC3"
+    "\xA9"
+    "",
+    "URL du serveur OPDS",
+};
+
+const char* const STRINGS_DE[] = {
+    "CrossPoint",
+    "STARTE",
+    "STANDBY",
+    "Standby...",
+    "Durchsuchen",
+    "Datei\xC3"
+    "\xBC"
+    "bertragung",
+    "Einstellungen",
+    "Calibre-Bibliothek",
+    "Weiterlesen",
+    "Aktuell kein Buch",
+    "Lesen beginnen",
+    "B\xC3"
+    "\xBC"
+    "cher",
+    "Keine B\xC3"
+    "\xBC"
+    "cher",
+    "Kapitel ausw\xC3"
+    "\xA4"
+    "hlen",
+    "Keine Kapitel",
+    "Buchende",
+    "Kapitelende",
+    "Indexieren\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Speicherfehler",
+    "Seitenladefehler",
+    "Leere Datei",
+    "Zu gro\xC3"
+    "\x9F"
+    "",
+    "Laden\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ladefehler bei XTC",
+    "Ladefehler bei TXT",
+    "Ladefehler bei EPUB",
+    "SD-Karten-Fehler",
+    "WLAN-Netzwerke",
+    "Kein WLAN gefunden",
+    "%zu Netze gefunden",
+    "Suchen...",
+    "Verbinden...",
+    "Verbunden!",
+    "Verbindungsfehler",
+    "Verbindungs-Timeout",
+    "WLAN vergessen?",
+    "Passwort speichern?",
+    "Passwort entfernen?",
+    "OK f\xC3"
+    "\xBC"
+    "r neue Suche",
+    "Beliebige Taste dr\xC3"
+    "\xBC"
+    "cken",
+    "links/rechts: Ausw\xC3"
+    "\xA4"
+    "hlen | OK: Best",
+    "Wie m\xC3"
+    "\xB6"
+    "chtest du dich verbinden?",
+    "Netzwerk beitreten",
+    "Hotspot erstellen",
+    "Mit einem bestehenden WLAN verbinden",
+    "WLAN f\xC3"
+    "\xBC"
+    "r andere erstellen",
+    "Hotspot starten\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Hotspot-Modus",
+    "Ger\xC3"
+    "\xA4"
+    "t mit diesem WLAN verbinden",
+    "Diese URL im Browser \xC3"
+    "\xB6"
+    "ffnen",
+    "oder http://",
+    "oder QR-Code mit dem Handy scannen:",
+    "Calibre Wireless",
+    "Calibre-Web-URL",
+    "Als Drahtlos-Ger\xC3"
+    "\xA4"
+    "t hinzuf\xC3"
+    "\xBC"
+    "gen",
+    "* = Verschl | + = Gesp",
+    "MAC-Adresse:",
+    "WLAN pr\xC3"
+    "\xBC"
+    "fen\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "WLAN-Passwort eingeben",
+    "Text eingeben",
+    "bis",
+    "Calibre finden...",
+    "Verbinden mit",
+    "Verbunden mit",
+    "Auf Befehle warten\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "(Keine Verbindung, wiederholen)",
+    "Calibre getrennt",
+    "Auf \xC3"
+    "\x9C"
+    "bertragung warten...",
+    "Bei \xC3"
+    "\x9C"
+    "bertragungsfehler \n'Freien Speicher ign.' in den\nCalibre-Einstellungen einschalten.",
+    "Empfange:",
+    "Empfangen:",
+    "Auf mehr warten\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Speicherfehler",
+    "Passwort n\xC3"
+    "\xB6"
+    "tig",
+    "\xC3"
+    "\x9C"
+    "bertragung unterbrochen",
+    "1) CrossPoint Reader-Plugin installieren",
+    "2) Mit selbem WLAN verbinden",
+    "3) In Calibre: \"An Ger\xC3"
+    "\xA4"
+    "t senden\"",
+    "Bildschirm beim Senden offenlassen",
+    "Anzeige",
+    "Lesen",
+    "Bedienung",
+    "System",
+    "Standby",
+    "Standby-Covermodus",
+    "Statusleiste",
+    "Ohne Batterie %",
+    "Absatzabstand",
+    "Schriftgl\xC3"
+    "\xA4"
+    "ttung",
+    "An-Taste kurz dr\xC3"
+    "\xBC"
+    "cken",
+    "Leseausrichtung",
+    "Vorderes Tastenlayout",
+    "Seitliches Tastenlayout (Lesen)",
+    "Langes Dr\xC3"
+    "\xBC"
+    "cken springt Kap.",
+    "Lese-Schriftfamilie",
+    "Externe Schriftart",
+    "Lese-Schriftart",
+    "Men\xC3"
+    "\xBC"
+    "-Schriftart",
+    "Men\xC3"
+    "\xBC"
+    "-Schriftgr\xC3"
+    "\xB6"
+    "\xC3"
+    "\x9F"
+    "e",
+    "Lese-Zeilenabstand",
+    "ASCII-Zeichenabstand",
+    "ASCII-Ziffernabstand",
+    "CJK-Zeichenabstand",
+    "Farbmodus",
+    "Lese-Seitenr\xC3"
+    "\xA4"
+    "nder",
+    "Lese-Absatzausrichtung",
+    "Silbentrennung",
+    "Standby nach",
+    "Aktualisierungsrate",
+    "Calibre-Einstellungen",
+    "KOReader-Synchr.",
+    "Nach Updates suchen",
+    "Sprache",
+    "Bildauswahl Standby",
+    "Lese-Cache leeren",
+    "Calibre",
+    "Benutzername",
+    "Passwort n\xC3"
+    "\xB6"
+    "tig",
+    "Sync-Server-URL",
+    "Dateizuordnung",
+    "Authentifizieren",
+    "KOReader-Benutzername",
+    "KOReader-Passwort",
+    "Dateiname",
+    "Bin\xC3"
+    "\xA4"
+    "rdatei",
+    "Zuerst anmelden",
+    "WLAN-Verbindung fehlgeschlagen",
+    "Authentifizieren\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Erfolgreich authentifiziert!",
+    "KOReader-Auth",
+    "KOReader-Synchronisierung bereit",
+    "Authentifizierung fehlg.",
+    "Erledigt",
+    "Alle Buch-Caches werden geleert.",
+    "Lesefortschritt wird gel\xC3"
+    "\xB6"
+    "scht!",
+    "B\xC3"
+    "\xBC"
+    "cher m\xC3"
+    "\xBC"
+    "ssen beim \xC3"
+    "\x96"
+    "ffnen",
+    "neu eingelesen werden.",
+    "Cache leeren\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Cache geleert",
+    "Eintr\xC3"
+    "\xA4"
+    "ge entfernt",
+    "fehlgeschlagen",
+    "Fehler beim Cache-Leeren",
+    "Serielle Ausgabe pr\xC3"
+    "\xBC"
+    "fen",
+    "Dunkel",
+    "Hell",
+    "Angepasst",
+    "Titelbild",
+    "Keine",
+    "Anpassen",
+    "Zuschnitt",
+    "Ohne Fortschr.",
+    "Vollst.",
+    "Nie",
+    "Beim Lesen",
+    "Immer",
+    "Ignorieren",
+    "Standby",
+    "Umbl\xC3"
+    "\xA4"
+    "ttern",
+    "Hochformat",
+    "Querformat rechts",
+    "Umgedreht",
+    "Querformat links",
+    "Zur\xC3"
+    "\xBC"
+    "ck, Bst, L, R",
+    "L, R, Zur\xC3"
+    "\xBC"
+    "ck, Bst",
+    "L, Zur\xC3"
+    "\xBC"
+    "ck, Bst, R",
+    "Zur\xC3"
+    "\xBC"
+    "ck/Weiter",
+    "Weiter/Zu\xC3"
+    "\xBC"
+    "rck",
+    "Bookerly",
+    "Noto Sans",
+    "Open Dyslexic",
+    "Klein",
+    "Mittel",
+    "Gro\xC3"
+    "\x9F"
+    "",
+    "Extragro\xC3"
+    "\x9F"
+    "",
+    "Eng",
+    "Normal",
+    "Breit",
+    "Blocksatz",
+    "Links",
+    "Zentriert",
+    "Rechts",
+    "1 Min",
+    "5 Min",
+    "10 Min",
+    "15 Min",
+    "30 Min",
+    "1 Seite",
+    "5 Seiten",
+    "10 Seiten",
+    "15 Seiten",
+    "30 Seiten",
+    "Update",
+    "Update suchen\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Neues Update verf\xC3"
+    "\xBC"
+    "gbar!",
+    "Aktuelle Version:",
+    "Neue Version:",
+    "Aktualisiere\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Kein Update verf\xC3"
+    "\xBC"
+    "gbar",
+    "Updatefehler",
+    "Update fertig",
+    "An-Knopf lang dr\xC3"
+    "\xBC"
+    "cken, um neuzustarten",
+    "Externe Schrift",
+    "Vorinstalliert (aus)",
+    "Keine Eintr\xC3"
+    "\xA4"
+    "ge",
+    "Herunterladen\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ladefehler",
+    "Fehler:",
+    "Unbenannt",
+    "Keine Server-URL konfiguriert",
+    "Feedfehler",
+    "Feed-Format ung\xC3"
+    "\xBC"
+    "ltig",
+    "Netzwerk:",
+    "IP-Adresse:",
+    "oder QR-Code mit dem Handy scannen f\xC3"
+    "\xBC"
+    "r WLAN.",
+    "Fehler: Allgemeiner Fehler",
+    "Fehler: Kein Netzwerk",
+    "Fehler: Zeit\xC3"
+    "\xBC"
+    "berschreitung",
+    "SD-Karte",
+    "\xC2"
+    "\xAB"
+    " Zur\xC3"
+    "\xBC"
+    "ck",
+    "\xC2"
+    "\xAB"
+    " Verlassen",
+    "\xC2"
+    "\xAB"
+    " Start",
+    "\xC2"
+    "\xAB"
+    " Speichern",
+    "Ausw\xC3"
+    "\xA4"
+    "hlen",
+    "Umschalten",
+    "Best\xC3"
+    "\xA4"
+    "tigen",
+    "Abbrechen",
+    "Verbinden",
+    "\xC3"
+    "\x96"
+    "ffnen",
+    "Herunterladen",
+    "Wiederh.",
+    "Ja",
+    "Nein",
+    "AN",
+    "AUS",
+    "Gesetzt",
+    "Keine",
+    "Links",
+    "Rechts",
+    "Hoch",
+    "Runter",
+    "UMSCH",
+    "umsch",
+    "OK",
+    "[AN]",
+    "Standby-Coverfilter",
+    "Kontrast",
+    "Komplett + Prozent",
+    "Komplett + Buch",
+    "Nur Buch",
+    "Komplett + Kapitel",
+    "System-Design",
+    "Klassisch",
+    "Lyra",
+    "Anti-Verblassen",
+    "Vordere Tasten belegen",
+    "OPDS-Browser",
+    "Titel + Angepasst",
+    "Zuletzt",
+    "Zuletzt gelesen",
+    "Keine B\xC3"
+    "\xBC"
+    "cher",
+    "Calibre-\xC3"
+    "\x9C"
+    "bertragung (WLAN)",
+    "WLAN entfernen & Passwort l\xC3"
+    "\xB6"
+    "schen?",
+    "WLAN entfernen",
+    "Calibre starten\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Installation",
+    "Status",
+    "Leeren",
+    "Standard",
+    "Entsprechende Vordertaste dr\xC3"
+    "\xBC"
+    "cken",
+    "Leer",
+    "Bereits zugeordnet",
+    "Seitentaste hoch: Standard",
+    "Seitentaste runter: Abbrechen",
+    "Zur\xC3"
+    "\xBC"
+    "ck (1. Taste)",
+    "Best\xC3"
+    "\xA4"
+    "tigen (2. Taste)",
+    "Links (3. Taste)",
+    "Rechts (4. Taste)",
+    "Gehe zu %",
+    "Zum Anfang",
+    "Fortschritt synchr.",
+    "Buch-Cache leeren",
+    "Kapitel:",
+    " Seiten  |  ",
+    "Buch: ",
+    "umsch",
+    "UMSCH",
+    "FESTST",
+    "Calibre: URL um /opds erg\xC3"
+    "\xA4"
+    "nzen",
+    "links/rechts: 1% hoch/runter: 10%",
+    "Zeit synchonisieren\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Dokument-Hash berechnen\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Dokument-Hash fehlgeschlagen",
+    "Externen Fortschritt abrufen...",
+    "Fortschritt hochladen\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Zugangsdaten fehlen",
+    "KOReader-Konto unter Einst. anlegen",
+    "Gefunden!",
+    "Extern:",
+    "Lokal:",
+    "  Seite %d, %.2f%% insgesamt",
+    "  Seite %d/%d, %.2f%% insgesamt",
+    "  Von: %s",
+    "Ext. Fortschritt \xC3"
+    "\xBC"
+    "bern.",
+    "Lokalen Fortschritt hochl.",
+    "Kein externer Fortschritt",
+    "Aktuelle Position hochladen?",
+    "Hochgeladen!",
+    "Fehlgeschlagen",
+    "Abschnitt",
+    "Hochladen",
+    "Buch-Stil",
+    "Eingebetteter Stil",
+    "OPDS-Server-URL",
 };
 
 }  // namespace i18n_strings
@@ -1662,15 +2700,18 @@ const char* const STRINGS_FR[] = {
 static_assert(sizeof(i18n_strings::STRINGS_EN) / sizeof(i18n_strings::STRINGS_EN[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_EN size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_ES) / sizeof(i18n_strings::STRINGS_ES[0]) ==
+static_assert(sizeof(i18n_strings::STRINGS_SP) / sizeof(i18n_strings::STRINGS_SP[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_ES size mismatch");
+              "STRINGS_SP size mismatch");
 static_assert(sizeof(i18n_strings::STRINGS_IT) / sizeof(i18n_strings::STRINGS_IT[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_IT size mismatch");
-static_assert(sizeof(i18n_strings::STRINGS_SV) / sizeof(i18n_strings::STRINGS_SV[0]) ==
+static_assert(sizeof(i18n_strings::STRINGS_SW) / sizeof(i18n_strings::STRINGS_SW[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
-              "STRINGS_SV size mismatch");
+              "STRINGS_SW size mismatch");
 static_assert(sizeof(i18n_strings::STRINGS_FR) / sizeof(i18n_strings::STRINGS_FR[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_FR size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_DE) / sizeof(i18n_strings::STRINGS_DE[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_DE size mismatch");

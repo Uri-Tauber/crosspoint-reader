@@ -139,8 +139,8 @@ void ButtonRemapActivity::render() {
     return "-";
   };
 
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, i18n(REMAP_FRONT_BUTTONS), true, EpdFontFamily::BOLD);
-  renderer.drawCenteredText(UI_10_FONT_ID, 40, i18n(REMAP_PROMPT));
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_REMAP_FRONT_BUTTONS), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, 40, tr(STR_REMAP_PROMPT));
 
   for (uint8_t i = 0; i < kRoleCount; i++) {
     const int y = 70 + i * 30;
@@ -155,7 +155,7 @@ void ButtonRemapActivity::render() {
     renderer.drawText(UI_10_FONT_ID, 20, y, roleName, !isSelected);
 
     // Show currently assigned hardware button (or unassigned).
-    const char* assigned = (tempMapping[i] == kUnassigned) ? i18n(UNASSIGNED) : getHardwareName(tempMapping[i]);
+    const char* assigned = (tempMapping[i] == kUnassigned) ? tr(STR_UNASSIGNED) : getHardwareName(tempMapping[i]);
     const auto width = renderer.getTextWidth(UI_10_FONT_ID, assigned);
     renderer.drawText(UI_10_FONT_ID, pageWidth - 20 - width, y, assigned, !isSelected);
   }
@@ -166,8 +166,8 @@ void ButtonRemapActivity::render() {
   }
 
   // Provide side button actions at the bottom of the screen (split across two lines).
-  renderer.drawCenteredText(SMALL_FONT_ID, 250, i18n(REMAP_RESET_HINT), true);
-  renderer.drawCenteredText(SMALL_FONT_ID, 280, i18n(REMAP_CANCEL_HINT), true);
+  renderer.drawCenteredText(SMALL_FONT_ID, 250, tr(STR_REMAP_RESET_HINT), true);
+  renderer.drawCenteredText(SMALL_FONT_ID, 280, tr(STR_REMAP_CANCEL_HINT), true);
 
   // Live preview of logical labels under front buttons.
   // This mirrors the on-device front button order: Back, Confirm, Left, Right.
@@ -190,7 +190,7 @@ bool ButtonRemapActivity::validateUnassigned(const uint8_t pressedButton) {
   // Block reusing a hardware button already assigned to another role.
   for (uint8_t i = 0; i < kRoleCount; i++) {
     if (tempMapping[i] == pressedButton && i != currentStep) {
-      errorMessage = i18n(ALREADY_ASSIGNED);
+      errorMessage = tr(STR_ALREADY_ASSIGNED);
       errorUntil = millis() + kErrorDisplayMs;
       return false;
     }
@@ -201,27 +201,27 @@ bool ButtonRemapActivity::validateUnassigned(const uint8_t pressedButton) {
 const char* ButtonRemapActivity::getRoleName(const uint8_t roleIndex) const {
   switch (roleIndex) {
     case 0:
-      return i18n(BACK);
+      return tr(STR_BACK);
     case 1:
-      return i18n(CONFIRM);
+      return tr(STR_CONFIRM);
     case 2:
-      return i18n(DIR_LEFT);
+      return tr(STR_DIR_LEFT);
     case 3:
     default:
-      return i18n(DIR_RIGHT);
+      return tr(STR_DIR_RIGHT);
   }
 }
 
 const char* ButtonRemapActivity::getHardwareName(const uint8_t buttonIndex) const {
   switch (buttonIndex) {
     case CrossPointSettings::FRONT_HW_BACK:
-      return i18n(HW_BACK_LABEL);
+      return tr(STR_HW_BACK_LABEL);
     case CrossPointSettings::FRONT_HW_CONFIRM:
-      return i18n(HW_CONFIRM_LABEL);
+      return tr(STR_HW_CONFIRM_LABEL);
     case CrossPointSettings::FRONT_HW_LEFT:
-      return i18n(HW_LEFT_LABEL);
+      return tr(STR_HW_LEFT_LABEL);
     case CrossPointSettings::FRONT_HW_RIGHT:
-      return i18n(HW_RIGHT_LABEL);
+      return tr(STR_HW_RIGHT_LABEL);
     default:
       return "Unknown";
   }

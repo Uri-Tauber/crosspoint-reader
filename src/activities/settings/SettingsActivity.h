@@ -28,8 +28,8 @@ struct SettingInfo {
   };
   ValueRange valueRange = {};
 
-  const char* key = nullptr;         // JSON API key (nullptr for ACTION types)
-  StrId category = StrId::NONE_OPT;  // Category for web UI grouping
+  const char* key = nullptr;             // JSON API key (nullptr for ACTION types)
+  StrId category = StrId::STR_NONE_OPT;  // Category for web UI grouping
 
   // Direct char[] string fields (for settings stored in CrossPointSettings)
   char* stringPtr = nullptr;
@@ -42,7 +42,7 @@ struct SettingInfo {
   std::function<void(const std::string&)> stringSetter;
 
   static SettingInfo Toggle(StrId nameId, uint8_t CrossPointSettings::* ptr, const char* key = nullptr,
-                            StrId category = StrId::NONE_OPT) {
+                            StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::TOGGLE;
@@ -53,7 +53,7 @@ struct SettingInfo {
   }
 
   static SettingInfo Enum(StrId nameId, uint8_t CrossPointSettings::* ptr, std::vector<StrId> values,
-                          const char* key = nullptr, StrId category = StrId::NONE_OPT) {
+                          const char* key = nullptr, StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::ENUM;
@@ -72,7 +72,7 @@ struct SettingInfo {
   }
 
   static SettingInfo Value(StrId nameId, uint8_t CrossPointSettings::* ptr, const ValueRange valueRange,
-                           const char* key = nullptr, StrId category = StrId::NONE_OPT) {
+                           const char* key = nullptr, StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::VALUE;
@@ -84,7 +84,7 @@ struct SettingInfo {
   }
 
   static SettingInfo String(StrId nameId, char* ptr, size_t maxLen, const char* key = nullptr,
-                            StrId category = StrId::NONE_OPT) {
+                            StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::STRING;
@@ -97,7 +97,7 @@ struct SettingInfo {
 
   static SettingInfo DynamicEnum(StrId nameId, std::vector<StrId> values, std::function<uint8_t()> getter,
                                  std::function<void(uint8_t)> setter, const char* key = nullptr,
-                                 StrId category = StrId::NONE_OPT) {
+                                 StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::ENUM;
@@ -111,7 +111,7 @@ struct SettingInfo {
 
   static SettingInfo DynamicString(StrId nameId, std::function<std::string()> getter,
                                    std::function<void(const std::string&)> setter, const char* key = nullptr,
-                                   StrId category = StrId::NONE_OPT) {
+                                   StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::STRING;

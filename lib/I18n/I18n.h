@@ -38,5 +38,5 @@ class I18n {
 };
 
 // Convenience macros
-#define i18n(id) I18n::getInstance().get(StrId::id)
+#define tr(id) I18n::getInstance().get(StrId::id)
 #define I18N I18n::getInstance()

@@ -13,7 +13,7 @@
 
 namespace {
 constexpr int MENU_ITEMS = 3;
-const StrId menuNames[MENU_ITEMS] = {StrId::CALIBRE_WEB_URL, StrId::USERNAME, StrId::PASSWORD};
+const StrId menuNames[MENU_ITEMS] = {StrId::STR_CALIBRE_WEB_URL, StrId::STR_USERNAME, StrId::STR_PASSWORD};
 }  // namespace
 
 void CalibreSettingsActivity::taskTrampoline(void* param) {
@@ -83,7 +83,7 @@ void CalibreSettingsActivity::handleSelection() {
     // OPDS Server URL
     exitActivity();
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, i18n(CALIBRE_WEB_URL), SETTINGS.opdsServerUrl, 10,
+        renderer, mappedInput, tr(STR_CALIBRE_WEB_URL), SETTINGS.opdsServerUrl, 10,
         127,    // maxLength
         false,  // not password
         [this](const std::string& url) {
@@ -101,7 +101,7 @@ void CalibreSettingsActivity::handleSelection() {
     // Username
     exitActivity();
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, i18n(USERNAME), SETTINGS.opdsUsername, 10,
+        renderer, mappedInput, tr(STR_USERNAME), SETTINGS.opdsUsername, 10,
         63,     // maxLength
         false,  // not password
         [this](const std::string& username) {
@@ -119,7 +119,7 @@ void CalibreSettingsActivity::handleSelection() {
     // Password
     exitActivity();
     enterNewActivity(new KeyboardEntryActivity(
-        renderer, mappedInput, i18n(PASSWORD), SETTINGS.opdsPassword, 10,
+        renderer, mappedInput, tr(STR_PASSWORD), SETTINGS.opdsPassword, 10,
         63,     // maxLength
         false,  // not password mode
         [this](const std::string& password) {
@@ -156,10 +156,10 @@ void CalibreSettingsActivity::render() {
   const auto pageWidth = renderer.getScreenWidth();
 
   // Draw header
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, i18n(OPDS_BROWSER), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_OPDS_BROWSER), true, EpdFontFamily::BOLD);
 
   // Draw info text about Calibre
-  renderer.drawCenteredText(UI_10_FONT_ID, 40, i18n(CALIBRE_URL_HINT));
+  renderer.drawCenteredText(UI_10_FONT_ID, 40, tr(STR_CALIBRE_URL_HINT));
 
   // Draw selection highlight
   renderer.fillRect(0, 70 + selectedIndex * 30 - 2, pageWidth - 1, 30);
@@ -172,23 +172,23 @@ void CalibreSettingsActivity::render() {
     renderer.drawText(UI_10_FONT_ID, 20, settingY, I18N.get(menuNames[i]), !isSelected);
 
     // Draw status for each setting
-    std::string status = std::string("[") + i18n(NOT_SET) + "]";
+    std::string status = std::string("[") + tr(STR_NOT_SET) + "]";
     if (i == 0) {
-      status = (strlen(SETTINGS.opdsServerUrl) > 0) ? std::string("[") + i18n(SET) + "]"
-                                                    : std::string("[") + i18n(NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsServerUrl) > 0) ? std::string("[") + tr(STR_SET) + "]"
+                                                    : std::string("[") + tr(STR_NOT_SET) + "]";
     } else if (i == 1) {
-      status = (strlen(SETTINGS.opdsUsername) > 0) ? std::string("[") + i18n(SET) + "]"
-                                                   : std::string("[") + i18n(NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsUsername) > 0) ? std::string("[") + tr(STR_SET) + "]"
+                                                   : std::string("[") + tr(STR_NOT_SET) + "]";
     } else if (i == 2) {
-      status = (strlen(SETTINGS.opdsPassword) > 0) ? std::string("[") + i18n(SET) + "]"
-                                                   : std::string("[") + i18n(NOT_SET) + "]";
+      status = (strlen(SETTINGS.opdsPassword) > 0) ? std::string("[") + tr(STR_SET) + "]"
+                                                   : std::string("[") + tr(STR_NOT_SET) + "]";
     }
     const auto width = renderer.getTextWidth(UI_10_FONT_ID, status.c_str());
     renderer.drawText(UI_10_FONT_ID, pageWidth - 20 - width, settingY, status.c_str(), !isSelected);
   }
 
   // Draw button hints
-  const auto labels = mappedInput.mapLabels(i18n(BACK), i18n(SELECT), "", "");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

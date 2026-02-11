@@ -100,7 +100,7 @@ void LanguageSelectActivity::render() {
   constexpr int rowHeight = 30;
 
   // Title
-  renderer.drawCenteredText(UI_12_FONT_ID, 15, i18n(LANGUAGE), true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, 15, tr(STR_LANGUAGE), true, EpdFontFamily::BOLD);
 
   // Current language marker
   const int currentLang = static_cast<int>(I18N.getLanguage());
@@ -122,14 +122,14 @@ void LanguageSelectActivity::render() {
 
     // Draw current selection marker
     if (isCurrent) {
-      const char* marker = i18n(ON_MARKER);
+      const char* marker = tr(STR_ON_MARKER);
       const auto width = renderer.getTextWidth(UI_10_FONT_ID, marker);
       renderer.drawText(UI_10_FONT_ID, pageWidth - 20 - width, itemY, marker, !isSelected);
     }
   }
 
   // Button hints
-  const auto labels = mappedInput.mapLabels(i18n(BACK), i18n(SELECT), "", "");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
