@@ -12,6 +12,7 @@
 #include "MappedInputManager.h"
 #include "OtaUpdateActivity.h"
 #include "SettingsList.h"
+#include "activities/network/WifiSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -48,12 +49,13 @@ void SettingsActivity::onEnter() {
   }
 
   // Append device-only ACTION items
-  controlsSettings.insert(controlsSettings.begin(), SettingInfo::Action(StrId::STR_REMAP_FRONT_BUTTONS));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE));
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES));
+  controlsSettings.insert(controlsSettings.begin(), SettingInfo::Action(StrId::STR_REMAP_FRONT_BUTTONS, SettingAction::RemapFrontButtons));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_WIFI_NETWORKS, SettingAction::Network));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC, SettingAction::KOReaderSync));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_BROWSER, SettingAction::OPDSBrowser));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_CLEAR_READING_CACHE, SettingAction::ClearCache));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
 
   // Reset selection to first category
   selectedCategoryIndex = 0;
@@ -181,54 +183,48 @@ void SettingsActivity::toggleCurrentSetting() {
       SETTINGS.*(setting.valuePtr) = currentValue + setting.valueRange.step;
     }
   } else if (setting.type == SettingType::ACTION) {
-    if (setting.nameId == StrId::STR_REMAP_FRONT_BUTTONS) {
+    auto enterSubActivity = [this](Activity* activity) {
       xSemaphoreTake(renderingMutex, portMAX_DELAY);
       exitActivity();
-      enterNewActivity(new ButtonRemapActivity(renderer, mappedInput, [this] {
-        exitActivity();
-        updateRequired = true;
-      }));
+      enterNewActivity(activity);
       xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::STR_KOREADER_SYNC) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+    };
+
+    auto onComplete = [this] {
       exitActivity();
-      enterNewActivity(new KOReaderSettingsActivity(renderer, mappedInput, [this] {
-        exitActivity();
-        updateRequired = true;
-      }));
-      xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::STR_OPDS_BROWSER) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
+      updateRequired = true;
+    };
+
+    auto onCompleteBool = [this](bool) {
       exitActivity();
-      enterNewActivity(new CalibreSettingsActivity(renderer, mappedInput, [this] {
-        exitActivity();
-        updateRequired = true;
-      }));
-      xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::STR_CLEAR_READING_CACHE) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new ClearCacheActivity(renderer, mappedInput, [this] {
-        exitActivity();
-        updateRequired = true;
-      }));
-      xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::STR_CHECK_UPDATES) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new OtaUpdateActivity(renderer, mappedInput, [this] {
-        exitActivity();
-        updateRequired = true;
-      }));
-      xSemaphoreGive(renderingMutex);
-    } else if (setting.nameId == StrId::STR_LANGUAGE) {
-      xSemaphoreTake(renderingMutex, portMAX_DELAY);
-      exitActivity();
-      enterNewActivity(new LanguageSelectActivity(renderer, mappedInput, [this] {
-        exitActivity();
-        updateRequired = true;
-      }));
-      xSemaphoreGive(renderingMutex);
+      updateRequired = true;
+    };
+
+    switch (setting.action) {
+      case SettingAction::RemapFrontButtons:
+        enterSubActivity(new ButtonRemapActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::KOReaderSync:
+        enterSubActivity(new KOReaderSettingsActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::OPDSBrowser:
+        enterSubActivity(new CalibreSettingsActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::Network:
+        enterSubActivity(new WifiSelectionActivity(renderer, mappedInput, onCompleteBool, false));
+        break;
+      case SettingAction::ClearCache:
+        enterSubActivity(new ClearCacheActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::CheckForUpdates:
+        enterSubActivity(new OtaUpdateActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::Language:
+        enterSubActivity(new LanguageSelectActivity(renderer, mappedInput, onComplete));
+        break;
+      case SettingAction::None:
+        // Do nothing
+        break;
     }
   } else {
     return;

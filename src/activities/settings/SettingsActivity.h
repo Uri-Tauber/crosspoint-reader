@@ -15,11 +15,23 @@ class CrossPointSettings;
 
 enum class SettingType { TOGGLE, ENUM, ACTION, VALUE, STRING };
 
+enum class SettingAction {
+  None,
+  RemapFrontButtons,
+  KOReaderSync,
+  OPDSBrowser,
+  Network,
+  ClearCache,
+  CheckForUpdates,
+  Language,
+};
+
 struct SettingInfo {
   StrId nameId;
   SettingType type;
   uint8_t CrossPointSettings::* valuePtr = nullptr;
   std::vector<StrId> enumValues;
+  SettingAction action = SettingAction::None;
 
   struct ValueRange {
     uint8_t min;
@@ -64,10 +76,11 @@ struct SettingInfo {
     return s;
   }
 
-  static SettingInfo Action(StrId nameId) {
+  static SettingInfo Action(StrId nameId, SettingAction action) {
     SettingInfo s;
     s.nameId = nameId;
     s.type = SettingType::ACTION;
+    s.action = action;
     return s;
   }
 
