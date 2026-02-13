@@ -35,6 +35,7 @@ const char* const LANGUAGE_NAMES[] = {
     "\xD0"
     "\xB9"
     "",
+    "Svenska",
 };
 
 // Character sets for each language
@@ -312,6 +313,27 @@ const char* const CHARACTER_SETS[] = {
     "\xD1"
     "\x91"
     "",  // Русский
+    " !%'()*+,-./01235:;=?ABCDEFGHIJKLMNOPQRSTUVWX[\\]abcdefghijklmnoprstuvwxyz|\xC2"
+    "\xAB"
+    "\xC3"
+    "\x84"
+    "\xC3"
+    "\x85"
+    "\xC3"
+    "\x96"
+    "\xC3"
+    "\xA4"
+    "\xC3"
+    "\xA5"
+    "\xC3"
+    "\xB6"
+    "\xE2"
+    "\x80"
+    "\x9D"
+    "\xE2"
+    "\x80"
+    "\xA6"
+    "",  // Svenska
 };
 
 namespace i18n_strings {
@@ -13082,6 +13104,844 @@ const char* const STRINGS_RU[] = {
     "",
 };
 
+const char* const STRINGS_SV[] = {
+    "Crosspoint",
+    "STARTAR",
+    "VILA",
+    "G\xC3"
+    "\xA5"
+    "r i vila\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Bl\xC3"
+    "\xA4"
+    "ddra filer\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Fil\xC3"
+    "\xB6"
+    "verf\xC3"
+    "\xB6"
+    "ring",
+    "Inst\xC3"
+    "\xA4"
+    "llningar",
+    "Calibrebibliotek",
+    "Forts\xC3"
+    "\xA4"
+    "tt l\xC3"
+    "\xA4"
+    "sa",
+    "Ingen \xC3"
+    "\xB6"
+    "ppen bok",
+    "B\xC3"
+    "\xB6"
+    "rja l\xC3"
+    "\xA4"
+    "sa nedan",
+    "B\xC3"
+    "\xB6"
+    "cker",
+    "Inga b\xC3"
+    "\xB6"
+    "cker hittade",
+    "V\xC3"
+    "\xA4"
+    "lj kapitel",
+    "Inga kapitel",
+    "Slutet p\xC3"
+    "\xA5"
+    " boken",
+    "Tomt kapitel",
+    "Indexerar\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Minnesfel",
+    "Sidladdningsfel",
+    "Tom fil",
+    "Utanf\xC3"
+    "\xB6"
+    "r gr\xC3"
+    "\xA4"
+    "nserna",
+    "Laddar\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Misslyckades ladda XTC",
+    "Misslyckades ladda TCT",
+    "Misslyckades ladda EPUB",
+    "SD-kortfel",
+    "Tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "sa n\xC3"
+    "\xA4"
+    "tverk",
+    "Inga n\xC3"
+    "\xA4"
+    "tverk funna",
+    "%zu n\xC3"
+    "\xA4"
+    "tverk funna",
+    "Scannar\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ansluter\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ansluten!",
+    "Anslutning misslyckades",
+    "Anslutnings timeout",
+    "Gl\xC3"
+    "\xB6"
+    "m n\xC3"
+    "\xA4"
+    "tverk?",
+    "Spara l\xC3"
+    "\xB6"
+    "senord till n\xC3"
+    "\xA4"
+    "sta g\xC3"
+    "\xA5"
+    "ng?",
+    "Radera sparat l\xC3"
+    "\xB6"
+    "senord?",
+    "Tryck OK f\xC3"
+    "\xB6"
+    "r att skanna igen",
+    "Tryck valfri knapp f\xC3"
+    "\xB6"
+    "r att forts\xC3"
+    "\xA4"
+    "tta",
+    "V\xC3"
+    "\x84"
+    "NSTER/H\xC3"
+    "\x96"
+    "GER: V\xC3"
+    "\xA4"
+    "lj OK: Bekr\xC3"
+    "\xA4"
+    "fta",
+    "Hur vill du ansluta?",
+    "Anslut till ett n\xC3"
+    "\xA4"
+    "tverk",
+    "Skapa surfzon",
+    "Anslut till ett befintligt tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "st n\xC3"
+    "\xA4"
+    "tverk",
+    "Skapa ett tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "st n\xC3"
+    "\xA4"
+    "tverk andra kan ansluta till",
+    "Startar surfzon\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Surfzonsl\xC3"
+    "\xA4"
+    "ge",
+    "Anslut din enhet till detta tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "sa n\xC3"
+    "\xA4"
+    "tverk",
+    "\xC3"
+    "\x96"
+    "ppna denna adress i din browser",
+    "eller http://",
+    "eller skanna QR-kod med din telefon:",
+    "Calibre Tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "st",
+    "Calibre webbadress",
+    "Anslut som tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "s enhet",
+    "* = Krypterad | + = Sparad",
+    "MAC-adress:",
+    "Kontrollerar tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "st n\xC3"
+    "\xA4"
+    "tverk\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Skriv in WiFi-l\xC3"
+    "\xB6"
+    "senord",
+    "Skriv text",
+    "till",
+    "S\xC3"
+    "\xB6"
+    "ker Calibre\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ansluter till",
+    "Ansluten till",
+    "V\xC3"
+    "\xA4"
+    "ntar p\xC3"
+    "\xA5"
+    " kommandon\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "(Anslutning misslyckades. F\xC3"
+    "\xB6"
+    "rs\xC3"
+    "\xB6"
+    "ker igen)",
+    "Calibre nedkopplat",
+    "V\xC3"
+    "\xA4"
+    "ntar p\xC3"
+    "\xA5"
+    " \xC3"
+    "\xB6"
+    "verf\xC3"
+    "\xB6"
+    "ring\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Om \xC3"
+    "\xB6"
+    "verf\xC3"
+    "\xB6"
+    "ring misslyckas: Aktivera\n'Ignorera fritt utrymme' i Calibre's\nSmartDevice plugin settings.",
+    "Tar emot:",
+    "Mottaget:",
+    "V\xC3"
+    "\xA4"
+    "ntar p\xC3"
+    "\xA5"
+    " mer..",
+    "Misslyckades att skapa fil",
+    "L\xC3"
+    "\xB6"
+    "senord kr\xC3"
+    "\xA4"
+    "vs",
+    "\xC3"
+    "\x96"
+    "verf\xC3"
+    "\xB6"
+    "ring avbr\xC3"
+    "\xB6"
+    "ts",
+    "1) Installera CrossPoint Reader plugin",
+    "2) Anslut till samma tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "sa n\xC3"
+    "\xA4"
+    "tverk",
+    "3) I Calibre: \xE2"
+    "\x80"
+    "\x9D"
+    "Skicka till enhet\xE2"
+    "\x80"
+    "\x9D"
+    "",
+    "\xE2"
+    "\x80"
+    "\x9D"
+    "H\xC3"
+    "\xA5"
+    "ll denna sk\xC3"
+    "\xA4"
+    "rm \xC3"
+    "\xB6"
+    "ppen under s\xC3"
+    "\xA4"
+    "ndning\xE2"
+    "\x80"
+    "\x9D"
+    "",
+    "Sk\xC3"
+    "\xA4"
+    "rm",
+    "L\xC3"
+    "\xA4"
+    "sare",
+    "Kontroller",
+    "System",
+    "Vilosk\xC3"
+    "\xA4"
+    "rm",
+    "Vilosk\xC3"
+    "\xA4"
+    "rmens omslagsl\xC3"
+    "\xA4"
+    "ge",
+    "Statusrad",
+    "D\xC3"
+    "\xB6"
+    "lj batteriprocent",
+    "Extra paragrafmellanrum",
+    "Textkantutj\xC3"
+    "\xA4"
+    "mning",
+    "Kort str\xC3"
+    "\xB6"
+    "mknappsklick",
+    "L\xC3"
+    "\xA4"
+    "srikting",
+    "Frontknappslayout",
+    "Sidoknappslayout (L\xC3"
+    "\xA4"
+    "sare)",
+    "L\xC3"
+    "\xA5"
+    "ng-tryck Kapitelskippning",
+    "Eboksl\xC3"
+    "\xA4"
+    "sarens typsnittsfamilj",
+    "Extern Eboksl\xC3"
+    "\xA4"
+    "sartypsnitt",
+    "Eboksl\xC3"
+    "\xA4"
+    "sartypsnitt",
+    "Anv\xC3"
+    "\xA4"
+    "ndargr\xC3"
+    "\xA4"
+    "nssnittets typsnitt",
+    "Anv\xC3"
+    "\xA4"
+    "ndargr\xC3"
+    "\xA4"
+    "nssnittets typsnittsstorlek",
+    "Eboksl\xC3"
+    "\xA4"
+    "sarens linjemellanrum",
+    "ASCII-bokstavsmellanrum",
+    "ASCII-siffermellanrum",
+    "CJK-mellanrum",
+    "F\xC3"
+    "\xA4"
+    "rgl\xC3"
+    "\xA4"
+    "ge",
+    "Eboksl\xC3"
+    "\xA4"
+    "sarens sk\xC3"
+    "\xA4"
+    "rmmarginal",
+    "Eboksl\xC3"
+    "\xA4"
+    "sarens paragraflinjeplacering",
+    "Avstavning",
+    "Tid f\xC3"
+    "\xB6"
+    "r att g\xC3"
+    "\xA5"
+    " i vila",
+    "Uppdateringsfrekvens",
+    "Calibreinst\xC3"
+    "\xA4"
+    "llningar",
+    "KorReader-synkronisering",
+    "Kolla efter uppdateringar",
+    "Spr\xC3"
+    "\xA5"
+    "k",
+    "V\xC3"
+    "\xA4"
+    "lj bakgrundsbild",
+    "Rensa Eboksl\xC3"
+    "\xA4"
+    "sarens cache",
+    "Calibre",
+    "Anv\xC3"
+    "\xA4"
+    "ndarnamn",
+    "L\xC3"
+    "\xB6"
+    "senord",
+    "Synkronisera serveradress",
+    "Dokumentmatchning",
+    "Autentisera ",
+    "KOReader anv\xC3"
+    "\xA4"
+    "ndarnamn",
+    "KOReader l\xC3"
+    "\xB6"
+    "senord",
+    "Filnamn",
+    "Bin\xC3"
+    "\xA4"
+    "r",
+    "Referenser",
+    "Tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "s anslutning misslyckades",
+    "Autentiserar\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Lyckad autentisering!",
+    "KORreader autentisering",
+    "KOReader synk \xC3"
+    "\xA4"
+    "r redo att anv\xC3"
+    "\xA4"
+    "ndas",
+    "Autentisering misslyckades",
+    "Klar",
+    "Detta rensar all cachad bokdata",
+    "Alla l\xC3"
+    "\xA4"
+    "sframsteg kommer att f\xC3"
+    "\xB6"
+    "rsvinna!",
+    "B\xC3"
+    "\xB6"
+    "cker kommer att beh\xC3"
+    "\xB6"
+    "va omindexeras",
+    "n\xC3"
+    "\xA4"
+    "r de \xC3"
+    "\xB6"
+    "ppnas p\xC3"
+    "\xA5"
+    " nytt.",
+    "Rensar cache\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Cache rensad!",
+    "objekt raderade",
+    "misslyckades ",
+    "Misslyckades att rensa cache",
+    "Kolla seriell utg\xC3"
+    "\xA5"
+    "ng f\xC3"
+    "\xB6"
+    "r detaljer",
+    "M\xC3"
+    "\xB6"
+    "rk",
+    "Ljus",
+    "Valfri",
+    "Omslag",
+    "Ingen \xC3"
+    "\xB6"
+    "ppen bok",
+    "Passa",
+    "Besk\xC3"
+    "\xA4"
+    "r",
+    "Ingen framg\xC3"
+    "\xA5"
+    "ng",
+    "Full",
+    "Aldrig",
+    "I Eboksl\xC3"
+    "\xA4"
+    "sare",
+    "Alltid",
+    "Ignorera",
+    "Vila",
+    "Sidv\xC3"
+    "\xA4"
+    "ndning",
+    "Portr\xC3"
+    "\xA4"
+    "tt",
+    "Landskap medurs",
+    "Inverterad",
+    "Landskap moturs",
+    "Bak, Bekr,V\xC3"
+    "\xA4"
+    "n, H\xC3"
+    "\xB6"
+    "g",
+    "V\xC3"
+    "\xA4"
+    "n, H\xC3"
+    "\xB6"
+    "g, Bak, Bekr",
+    "V\xC3"
+    "\xA4"
+    "n, Bak, Bekr, H\xC3"
+    "\xB6"
+    "g",
+    "F\xC3"
+    "\xB6"
+    "rra/N\xC3"
+    "\xA4"
+    "sta",
+    "N\xC3"
+    "\xA4"
+    "sta/F\xC3"
+    "\xB6"
+    "rra",
+    "Bookerly",
+    "Noto Sans",
+    "\xC3"
+    "\x96"
+    "ppen dyslektisk",
+    "Liten",
+    "Medium",
+    "Stor",
+    "Extra stor",
+    "Smal",
+    "Normal",
+    "Bred",
+    "R\xC3"
+    "\xA4"
+    "ttf\xC3"
+    "\xA4"
+    "rdiga",
+    "V\xC3"
+    "\xA4"
+    "nster",
+    "Mitten",
+    "H\xC3"
+    "\xB6"
+    "ger",
+    "1 min",
+    "5 min",
+    "10 min",
+    "15 min",
+    "30 min",
+    "1 sida",
+    "5 sidor",
+    "10 sidor",
+    "15 sidor",
+    "30 sidor",
+    "Uppdatera",
+    "S\xC3"
+    "\xB6"
+    "ker uppdatering\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ny uppdatering tillg\xC3"
+    "\xA4"
+    "nglig!",
+    "Nuvarande version:",
+    "Ny version:",
+    "Uppdaterar\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ingen uppdatering tillg\xC3"
+    "\xA4"
+    "nglig",
+    "Uppdatering misslyckades",
+    "Uppdatering f\xC3"
+    "\xA4"
+    "rdig",
+    "Tryck och h\xC3"
+    "\xA5"
+    "ll str\xC3"
+    "\xB6"
+    "mknappen f\xC3"
+    "\xB6"
+    "r att s\xC3"
+    "\xA4"
+    "tta p\xC3"
+    "\xA5"
+    " igen",
+    "Externt typsnitt",
+    "Inbyggd (Avst\xC3"
+    "\xA4"
+    "ngd)",
+    "Inga poster funna",
+    "Laddar ner\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Nedladdning misslyckades",
+    "Fel:",
+    "Ej namngiven",
+    "Ingen serveradress konfigurerad",
+    "Misslyckades att h\xC3"
+    "\xA4"
+    "mta fl\xC3"
+    "\xB6"
+    "de",
+    "Misslyckades att analysera fl\xC3"
+    "\xB6"
+    "de",
+    "N\xC3"
+    "\xA4"
+    "tverk:",
+    "IP-adress;",
+    "eller skanna QR-kod med din telefon f\xC3"
+    "\xB6"
+    "r att ansluta till WiFi.",
+    "Fel: Generellt fel",
+    "Fel: N\xC3"
+    "\xA4"
+    "tverk hittades inte",
+    "Fel: Anslutningstimeout",
+    "SD-kort",
+    "\xC2"
+    "\xAB"
+    " Bak",
+    "\xC2"
+    "\xAB"
+    " Avsluta",
+    "\xC2"
+    "\xAB"
+    " Hem",
+    "\xC2"
+    "\xAB"
+    " Spara",
+    "V\xC3"
+    "\xA4"
+    "lj ",
+    "V\xC3"
+    "\xA4"
+    "xla",
+    "Bekr\xC3"
+    "\xA4"
+    "fta",
+    "Avbryt",
+    "Anslut",
+    "\xC3"
+    "\x96"
+    "ppna",
+    "Ladda ner",
+    "F\xC3"
+    "\xB6"
+    "rs\xC3"
+    "\xB6"
+    "k igen",
+    "Ja",
+    "Nej",
+    "P\xC3"
+    "\x85"
+    "",
+    "AV",
+    "Inst\xC3"
+    "\xA4"
+    "lld",
+    "Inte inst\xC3"
+    "\xA4"
+    "lld",
+    "V\xC3"
+    "\xA4"
+    "nster",
+    "H\xC3"
+    "\xB6"
+    "ger",
+    "Upp",
+    "Ner",
+    "VERSALER",
+    "versaler",
+    "Okej",
+    "[P\xC3"
+    "\x85"
+    "]",
+    "Vilosk\xC3"
+    "\xA4"
+    "rmens omslagsfilter",
+    "Kontrast",
+    "Full w/ Procent",
+    "Full w/ Boklist",
+    "Boklist enbart",
+    "Full w/ Kapitellist",
+    "Anv\xC3"
+    "\xA4"
+    "ndargr\xC3"
+    "\xA4"
+    "nssnittstema",
+    "Klassisk",
+    "Lyra",
+    "Fix f\xC3"
+    "\xB6"
+    "r solskensmattning",
+    "\xC3"
+    "\x84"
+    "ndra frontknappar",
+    "OPDS-webbl\xC3"
+    "\xA4"
+    "sare",
+    "Omslag + Valfri",
+    "Senaste",
+    "Senaste b\xC3"
+    "\xB6"
+    "ckerna",
+    "Inga senaste b\xC3"
+    "\xB6"
+    "cker",
+    "Anv\xC3"
+    "\xA4"
+    "nd Calibres tr\xC3"
+    "\xA5"
+    "dl\xC3"
+    "\xB6"
+    "sa enhets\xC3"
+    "\xB6"
+    "verf\xC3"
+    "\xB6"
+    "ring",
+    "Gl\xC3"
+    "\xB6"
+    "m n\xC3"
+    "\xA4"
+    "tverk och ta bort sparat l\xC3"
+    "\xB6"
+    "senord?",
+    "Gl\xC3"
+    "\xB6"
+    "m n\xC3"
+    "\xA4"
+    "tverk",
+    "Starar Calibre\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Inst\xC3"
+    "\xA4"
+    "llning",
+    "Status",
+    "Rensa",
+    "Standard",
+    "Tryck en frontknapp f\xC3"
+    "\xB6"
+    "r var funktion",
+    "Otilldelad",
+    "Redan tilldelad",
+    "\xC3"
+    "\x96"
+    "versta sidoknapp: \xC3"
+    "\x85"
+    "terst\xC3"
+    "\xA4"
+    "ll standardlayout",
+    "Nedre sidoknapp: Avbryt tilldelning",
+    "Bak (F\xC3"
+    "\xB6"
+    "rsta knapp)",
+    "Bekr\xC3"
+    "\xA4"
+    "fta (Andra knapp)",
+    "V\xC3"
+    "\xA4"
+    "nster (Tredje knapp)",
+    "H\xC3"
+    "\xB6"
+    "ger (Fj\xC3"
+    "\xA4"
+    "rde knapp)",
+    "G\xC3"
+    "\xA5"
+    " till %",
+    "G\xC3"
+    "\xA5"
+    " Hem",
+    "Synkroniseringsframsteg",
+    "Radera bokcache",
+    "Kapitel:",
+    " sidor  |  ",
+    "Bok:",
+    "shift",
+    "SHIFT",
+    "LOCK",
+    "F\xC3"
+    "\xB6"
+    "r Calibre: l\xC3"
+    "\xA4"
+    "gg till /opds i din adress",
+    "V\xC3"
+    "\xA4"
+    "nster/H\xC3"
+    "\xB6"
+    "ger: 1% Upp/Ner 10%",
+    "Synkroniserar tid\xE2"
+    "\x80"
+    "\xA6"
+    "",
+    "Ber\xC3"
+    "\xA4"
+    "knar dokumenthash",
+    "Misslyckades att ber\xC3"
+    "\xA4"
+    "kna dokumenthash",
+    "H\xC3"
+    "\xA4"
+    "mtar fj\xC3"
+    "\xA4"
+    "rrframsteg",
+    "Laddar upp framsteg",
+    "Inga uppgifter inst\xC3"
+    "\xA4"
+    "llda",
+    "St\xC3"
+    "\xA4"
+    "ll in KOReaderkonto i Inst\xC3"
+    "\xA4"
+    "llningar",
+    "Framsteg funna!",
+    "Fj\xC3"
+    "\xA4"
+    "rr:",
+    "Lokalt:",
+    "Sida %d, %.2f%% totalt",
+    "Sida %d/%d, %.2f%% totalt",
+    "  Fr\xC3"
+    "\xA5"
+    "n: %s",
+    "Anv\xC3"
+    "\xA4"
+    "nd fj\xC3"
+    "\xA4"
+    "rrframsteg",
+    "Ladda upp lokala framsteg",
+    "Inga fj\xC3"
+    "\xA4"
+    "rrframsteg funna",
+    "Ladda upp nuvarande position?",
+    "Framsteg uppladdade!",
+    "Synkronisering misslyckades",
+    "Sektion",
+    "Uppladdning",
+    "Bokstil",
+    "Inb\xC3"
+    "\xA4"
+    "ddad stil",
+    "OPDS-serveradress",
+};
+
 }  // namespace i18n_strings
 
 // Compile-time validation of array sizes
@@ -13106,3 +13966,6 @@ static_assert(sizeof(i18n_strings::STRINGS_PO) / sizeof(i18n_strings::STRINGS_PO
 static_assert(sizeof(i18n_strings::STRINGS_RU) / sizeof(i18n_strings::STRINGS_RU[0]) ==
                   static_cast<size_t>(StrId::_COUNT),
               "STRINGS_RU size mismatch");
+static_assert(sizeof(i18n_strings::STRINGS_SV) / sizeof(i18n_strings::STRINGS_SV[0]) ==
+                  static_cast<size_t>(StrId::_COUNT),
+              "STRINGS_SV size mismatch");
