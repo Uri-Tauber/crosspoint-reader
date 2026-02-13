@@ -2,6 +2,7 @@
 
 #include <GfxRenderer.h>
 #include <I18n.h>
+#include <Logging.h>
 #include <WiFi.h>
 #include <esp_sntp.h>
 
@@ -33,9 +34,9 @@ void syncTimeWithNTP() {
   }
 
   if (retry < maxRetries) {
-    Serial.printf("[%lu] [KOSync] NTP time synced\n", millis());
+    LOG_DBG("KOSync", "NTP time synced");
   } else {
-    Serial.printf("[%lu] [KOSync] NTP sync timeout, using fallback\n", millis());
+    LOG_DBG("KOSync", "NTP sync timeout, using fallback");
   }
 }
 }  // namespace
@@ -49,12 +50,12 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
   exitActivity();
 
   if (!success) {
-    Serial.printf("[%lu] [KOSync] WiFi connection failed, exiting\n", millis());
+    LOG_DBG("KOSync", "WiFi connection failed, exiting");
     onCancel();
     return;
   }
 
-  Serial.printf("[%lu] [KOSync] WiFi connected, starting sync\n", millis());
+  LOG_DBG("KOSync", "WiFi connected, starting sync");
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   state = SYNCING;
@@ -89,7 +90,7 @@ void KOReaderSyncActivity::performSync() {
     return;
   }
 
-  Serial.printf("[%lu] [KOSync] Document hash: %s\n", millis(), documentHash.c_str());
+  LOG_DBG("KOSync", "Document hash: %s", documentHash.c_str());
 
   xSemaphoreTake(renderingMutex, portMAX_DELAY);
   statusMessage = tr(STR_FETCH_PROGRESS);
@@ -189,12 +190,12 @@ void KOReaderSyncActivity::onEnter() {
   }
 
   // Turn on WiFi
-  Serial.printf("[%lu] [KOSync] Turning on WiFi...\n", millis());
+  LOG_DBG("KOSync", "Turning on WiFi...");
   WiFi.mode(WIFI_STA);
 
   // Check if already connected
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[%lu] [KOSync] Already connected to WiFi\n", millis());
+    LOG_DBG("KOSync", "Already connected to WiFi");
     state = SYNCING;
     statusMessage = tr(STR_SYNCING_TIME);
     updateRequired = true;
@@ -217,7 +218,7 @@ void KOReaderSyncActivity::onEnter() {
   }
 
   // Launch WiFi selection subactivity
-  Serial.printf("[%lu] [KOSync] Launching WifiSelectionActivity...\n", millis());
+  LOG_DBG("KOSync", "Launching WifiSelectionActivity...");
   enterNewActivity(new WifiSelectionActivity(renderer, mappedInput,
                                              [this](const bool connected) { onWifiSelectionComplete(connected); }));
 }
