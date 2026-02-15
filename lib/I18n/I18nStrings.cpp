@@ -194,7 +194,7 @@ const char* const CHARACTER_SETS[] = {
     "\x80"
     "\x91"
     "",  // Português (Brasil)
-    " !%()*+-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefhiklnoprstuxyz|\xC2"
+    " !%()*+,-./012345:=?ABCDEFHIJKLMNOPQRSTUWX[]abcdefhiklnoprstuxyz|\xC2"
     "\xAB"
     "\xC2"
     "\xBB"
@@ -1209,7 +1209,7 @@ const char* const STRINGS_ES[] = {
     "Local",
     "P\xC3"
     "\xA1"
-    "gina %d, %.2f% Completada",
+    "gina %d, %.2f%% Completada",
     "P\xC3"
     "\xA1"
     "gina %d / %d, %.2f% Completada",
@@ -12592,7 +12592,17 @@ const char* const STRINGS_RU[] = {
     "\x86"
     "\xD0"
     "\xB0"
-    " %d",
+    " %d, %.2f%% \xD0"
+    "\xB2"
+    "\xD1"
+    "\x81"
+    "\xD0"
+    "\xB5"
+    "\xD0"
+    "\xB3"
+    "\xD0"
+    "\xBE"
+    "",
     "\xD0"
     "\xA1"
     "\xD1"

@@ -23,7 +23,7 @@ enum class Language : uint8_t {
   GERMAN = 3,
   CZECH = 4,
   PORTUGUESE = 5,
-  RUSSIA = 6,
+  RUSSIAN = 6,
   SWEDISH = 7,
   _COUNT
 };
@@ -368,7 +368,7 @@ inline const char* const* getStringArray(Language lang) {
       return i18n_strings::STRINGS_CZ;
     case Language::PORTUGUESE:
       return i18n_strings::STRINGS_PO;
-    case Language::RUSSIA:
+    case Language::RUSSIAN:
       return i18n_strings::STRINGS_RU;
     case Language::SWEDISH:
       return i18n_strings::STRINGS_SV;

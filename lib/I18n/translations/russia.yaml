@@ -1,5 +1,5 @@
 _language_name: "Русский"
-_language_code: "RUSSIA"
+_language_code: "RUSSIAN"
 _order: "6"
 
 STR_CROSSPOINT: "CrossPoint"
@@ -301,7 +301,7 @@ STR_KOREADER_SETUP_HINT: "Настройте аккаунт KOReader в наст
 STR_PROGRESS_FOUND: "Прогресс найден!"
 STR_REMOTE_LABEL: "Удалённый:"
 STR_LOCAL_LABEL: "Локальный:"
-STR_PAGE_OVERALL_FORMAT: "Страница %d"
+STR_PAGE_OVERALL_FORMAT: "Страница %d, %.2f%% всего"
 STR_PAGE_TOTAL_OVERALL_FORMAT: "Страница %d/%d"
 STR_DEVICE_FROM_FORMAT: "От: %s"
 STR_APPLY_REMOTE: "Применить удалённый прогресс"
